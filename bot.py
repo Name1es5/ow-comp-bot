@@ -228,23 +228,26 @@ async def result(interaction: Interaction):
         await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
-    response = "```"
-    total = len(rows)
-    for idx, (hero, role, map_, rank, result, ts) in enumerate(rows[::-1], 1):
+    response = (
+        "```"
+        "\n╭───────────────╮"
+        "\n│ Your Matches  │"
+        "\n╰───────────────╯\n"
+    )
+
+    for idx, (hero, role, map_, rank, result, ts) in enumerate(rows, 1):
         try:
             dt = datetime.datetime.fromisoformat(ts)
             time_fmt = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         except:
             time_fmt = "N/A"
 
-        response += f"{total - idx + 1}. {map_} [{result}]\n"
+        response += f"{idx}. {map_} [{result}]\n"
         response += f"   Role: {role}, Rank: {rank}, Time: {time_fmt}\n"
         response += f"   Heroes: {hero}\n\n"
+
     response += "```"
-
     await interaction.response.send_message(response)
-
-
 
 
 # --- Top Heroes played ---
