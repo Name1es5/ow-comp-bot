@@ -113,6 +113,9 @@ async def record(
     interaction: Interaction,
     role: str = SlashOption(name="role", description="Enter role (Tank, DPS, Support)", required=True),
     hero: str = SlashOption(name="hero", description="Enter hero name", required=True),
+    gamemode: str = SlashOption(name="gamemode", description="Enter gamemode", required=True,
+        choices=["Control", "Escort", "Push", "Hybrid", "Flashpoint"]
+    ),
     map: str = SlashOption(name="map", description="Enter map name", required=True),
     rank: str = SlashOption(name="rank", description="Enter rank tier", required=True),
     modifier: int = SlashOption(name="modifier", description="Rank modifier (1-5)", required=True),
@@ -155,7 +158,23 @@ async def autocomplete_hero(interaction: Interaction, input: str):
 
 @record.on_autocomplete("map")
 async def autocomplete_map(interaction: Interaction, input: str):
-    return [m for m in ALL_MAPS if input.lower() in m.lower()][:25]
+    gamemode = None
+    options = interaction.data.get("options", [])
+
+    for option in options:
+        if option["name"] == "gamemode":
+            gamemode = option.get("value")
+        elif option["name"] == "map" and "options" in option:
+            for sub in option["options"]:
+                if sub["name"] == "gamemode":
+                    gamemode = sub.get("value")
+
+    if gamemode in GAMEMODE_MAPS:
+        map_pool = GAMEMODE_MAPS[gamemode]
+    else:
+        map_pool = ALL_MAPS
+
+    return [m for m in map_pool if input.lower() in m.lower()][:25]
 
 @record.on_autocomplete("rank")
 async def autocomplete_rank(interaction: Interaction, input: str):
