@@ -188,7 +188,7 @@ async def result(interaction: Interaction):
         await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
-    table = "```\n{:<20} {:<8} {:<22} {:<13} {:<6} {}\n".format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted")
+    table = "```\n{:<20} {:<8} {:<20} {:<11} {:<6} {}\n".format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted")
     table += "-" * 80 + "\n"
     for hero, role, map_, rank, result, ts in rows:
         try:
@@ -196,7 +196,7 @@ async def result(interaction: Interaction):
             time_fmt = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         except:
             time_fmt = "N/A"
-        table += f"{hero:<20} {role:<8} {map_:<22} {rank:<10} {result:<6} {time_fmt}\n"
+        table += f"{hero:<20} {role:<8} {map_:<20} {rank:<11} {result:<6} {time_fmt}\n"
     table += "```"
 
     await interaction.response.send_message(table)
