@@ -13,7 +13,7 @@ intents = nextcord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# DB setup
+# --- DB Setup ---
 conn = sqlite3.connect("matches.db")
 c = conn.cursor()
 c.execute('''
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS matches (
 ''')
 conn.commit()
 
-# Constants
+# --- Constants ---
 SEASON_1_START = datetime.datetime(2022, 10, 4)
 SEASON_DURATION_WEEKS = 9
 
@@ -38,8 +38,48 @@ def get_current_season():
     delta = now - SEASON_1_START
     return delta.days // (SEASON_DURATION_WEEKS * 7) + 1
 
-# Record match
-@bot.slash_command(name="record", description="Record a match result manually.")
+ROLE_HEROES = {
+    "Tank": ["Doomfist", "D.Va", "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Zarya"],
+    "DPS": ["Ashe", "Bastion", "Cassidy", "Echo", "Freja", "Genji", "Hanzo", "Junkrat", "Mei", "Pharah", "Reaper",
+            "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbjörn", "Tracer", "Venture", "Widowmaker"],
+    "Support": ["Ana", "Baptiste", "Brigitte", "Illari", "Kiriko", "Lifeweaver", "Lucio", "Mercy", "Moira", "Zenyatta"]
+}
+
+GAMEMODE_MAPS = {
+    "Control": ["Antarctic Peninsula", "Busan", "Ilios", "Lijiang Tower", "Nepal", "Oasis", "Samoa"],
+    "Escort": ["Circuit Royal", "Dorado", "Havana", "Junkertown", "Rialto", "Route 66", "Shambali Monastery", "Watchpoint: Gibraltar"],
+    "Push": ["Colosseo", "Esperança", "New Queen Street", "Runasapi"],
+    "Hybrid": ["Blizzard World", "Eichenwalde", "Hollywood", "King's Row", "Midtown", "Numbani", "Paraíso"],
+    "Flashpoint": ["New Junk City", "Suravasa"]
+}
+
+ALL_HEROES = sum(ROLE_HEROES.values(), [])
+ALL_MAPS = [m for maps in GAMEMODE_MAPS.values() for m in maps]
+RANK_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Champion"]
+VALID_RESULTS = ["Win", "Loss"]
+
+# --- Slash Commands ---
+@bot.slash_command(name="ping", description="Check if the bot is alive")
+async def ping(interaction: Interaction):
+    await interaction.response.send_message("🏓 Pong!", ephemeral=True)
+
+@bot.slash_command(name="help", description="List all available commands and descriptions")
+async def help_command(interaction: Interaction):
+    embed = nextcord.Embed(
+        title="Overwatch Bot Help",
+        description="Here's a list of available commands:",
+        color=0x00ff99
+    )
+    embed.add_field(name="/record", value="Record a new match", inline=False)
+    embed.add_field(name="/result", value="View your match history this season", inline=False)
+    embed.add_field(name="/top_heroes", value="Show your top 3 most played heroes", inline=False)
+    embed.add_field(name="/clear", value="Delete all recorded matches", inline=False)
+    embed.add_field(name="/delete_last", value="Delete your last match", inline=False)
+    embed.add_field(name="/ping", value="Check bot responsiveness", inline=False)
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.slash_command(name="record", description="Record a match")
 async def record(
     interaction: Interaction,
     role: str,
@@ -49,8 +89,32 @@ async def record(
     modifier: int,
     result: str
 ):
-    rank_full = f"{rank} {modifier}"
+    role = role.capitalize()
+    result = result.capitalize()
+    rank = rank.capitalize()
+
+    if role not in ROLE_HEROES:
+        await interaction.response.send_message("Invalid role. Use one of: Tank, DPS, Support", ephemeral=True)
+        return
+
+    if hero not in ROLE_HEROES[role]:
+        await interaction.response.send_message(f"Invalid hero for role {role}.", ephemeral=True)
+        return
+
+    if map not in ALL_MAPS:
+        await interaction.response.send_message("Invalid map.", ephemeral=True)
+        return
+
+    if rank not in RANK_TIERS:
+        await interaction.response.send_message("Invalid rank.", ephemeral=True)
+        return
+
+    if result not in VALID_RESULTS:
+        await interaction.response.send_message("Result must be either Win or Loss.", ephemeral=True)
+        return
+
     timestamp = datetime.datetime.utcnow().isoformat()
+    rank_full = f"{rank} {modifier}"
 
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
@@ -64,8 +128,7 @@ async def record(
 
     await interaction.response.send_message("✅ Match recorded!", ephemeral=True)
 
-# View matches
-@bot.slash_command(name="result", description="View your match history.")
+@bot.slash_command(name="result", description="Show your recorded matches this season")
 async def result(interaction: Interaction):
     user_id = interaction.user.id
     season = get_current_season()
@@ -75,7 +138,8 @@ async def result(interaction: Interaction):
         c = conn.cursor()
         c.execute('''
             SELECT hero, role, map, rank, result, timestamp FROM matches
-            WHERE user_id = ? AND timestamp >= ? ORDER BY rowid DESC
+            WHERE user_id = ? AND timestamp >= ?
+            ORDER BY rowid DESC
         ''', (user_id, season_start.isoformat()))
         rows = c.fetchall()
 
@@ -109,52 +173,64 @@ async def result(interaction: Interaction):
 
         embed.add_field(
             name=f"{match_num}. {map_} [{result_val}]",
-            value=f"**Role:** {role}, **Rank:** {rank}, **Time:** {formatted}\n**Heroes:** {hero}",
+            value=f"**Role:** {role}, **Rank:** {rank}, **Time:** {formatted}\n**Hero:** {hero}",
             inline=False
         )
 
     await interaction.response.send_message(embed=embed)
 
-# Top heroes
-@bot.slash_command(name="top_heroes", description="Your top 3 most played heroes.")
+@bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
 async def top_heroes(interaction: Interaction):
+    user_id = interaction.user.id
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
-        c.execute("SELECT hero FROM matches WHERE user_id = ?", (interaction.user.id,))
+        c.execute("SELECT hero FROM matches WHERE user_id = ?", (user_id,))
         all_heroes = [h.strip() for row in c.fetchall() for h in row[0].split(",")]
 
     if not all_heroes:
-        await interaction.response.send_message("No data recorded.")
+        await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
     counter = Counter(all_heroes).most_common(3)
     total = sum(dict(counter).values())
 
-    embed = nextcord.Embed(title="🏆 Top 3 Most Played Heroes", color=0x00ff99)
+    embed = nextcord.Embed(title="🏆 Top 3 Heroes", color=0x00ff99)
     for hero, count in counter:
         percent = (count / total) * 100
         embed.add_field(name=hero, value=f"{count} games ({percent:.1f}%)", inline=False)
 
     await interaction.response.send_message(embed=embed)
 
-# Help
-@bot.slash_command(name="help", description="Show all commands.")
-async def help_cmd(interaction: Interaction):
-    embed = nextcord.Embed(title="📖 Bot Commands", color=0x00ff99)
-    embed.add_field(name="/record", value="Record a match result.", inline=False)
-    embed.add_field(name="/result", value="Show your recorded matches.", inline=False)
-    embed.add_field(name="/top_heroes", value="Your top 3 played heroes.", inline=False)
-    embed.add_field(name="/clear", value="Clear your match history.", inline=False)
-    embed.add_field(name="/delete_last", value="Delete most recent match.", inline=False)
-    embed.add_field(name="/ping", value="Bot health check.", inline=False)
-    embed.add_field(name="/help", value="Show this help message.", inline=False)
+@bot.slash_command(name="clear", description="Delete all your recorded matches")
+async def clear(interaction: Interaction):
+    user_id = interaction.user.id
+    with sqlite3.connect("matches.db") as conn:
+        c = conn.cursor()
+        c.execute("DELETE FROM matches WHERE user_id = ?", (user_id,))
+        conn.commit()
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message("🗑️ Your match history has been cleared.", ephemeral=True)
 
-# Ping
-@bot.slash_command(name="ping", description="Check if bot is responsive.")
-async def ping(interaction: Interaction):
-    await interaction.response.send_message("🏓 Pong!")
+@bot.slash_command(name="delete_last", description="Delete your most recent match")
+async def delete_last(interaction: Interaction):
+    user_id = interaction.user.id
+    with sqlite3.connect("matches.db") as conn:
+        c = conn.cursor()
+        c.execute("SELECT rowid FROM matches WHERE user_id = ? ORDER BY rowid DESC LIMIT 1", (user_id,))
+        row = c.fetchone()
+        if row:
+            c.execute("DELETE FROM matches WHERE rowid = ?", (row[0],))
+            conn.commit()
+            await interaction.response.send_message("🗑️ Last match deleted.", ephemeral=True)
+        else:
+            await interaction.response.send_message("No matches to delete.", ephemeral=True)
 
-# Run the bot
+@bot.event
+async def on_ready():
+    if not hasattr(bot, "synced"):
+        await bot.sync_application_commands()
+        bot.synced = True
+    print(f"✅ Bot online as {bot.user}")
+
+# --- Start the bot ---
 bot.run(os.getenv("BOT_TOKEN"))
