@@ -157,4 +157,4 @@ async def ping(interaction: Interaction):
     await interaction.response.send_message("🏓 Pong!")
 
 # Run the bot
-# bot.run(os.getenv("BOT_TOKEN"))
+bot.run(os.getenv("BOT_TOKEN"))
