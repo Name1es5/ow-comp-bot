@@ -72,14 +72,15 @@ class SettingsView(View):
 
 @bot.slash_command(name="settings", description="Configure your personal preferences")
 async def settings(interaction: Interaction):
-    embed = Embed(title="⚙️ Settings", description="Manage your match tracker preferences.", color=0x00ff99)
+    embed = Embed(title=" Settings", description="Manage your match tracker preferences.", color=0x00ff99)
     embed.add_field(name="Change Timezone", value="Set your preferred time display", inline=False)
     embed.add_field(name="Export Data", value="Download your match history as a file", inline=False)
     embed.add_field(name="GitHub", value="[Source Code](https://github.com/your-repo)", inline=False)
 
     await interaction.response.send_message(embed=embed, view=SettingsView(), ephemeral=True)
-    
-    @bot.listen("on_interaction")
+
+
+@bot.listen("on_interaction")
 async def on_button_click(interaction: Interaction):
     if interaction.type.name != "component":
         return
@@ -88,9 +89,8 @@ async def on_button_click(interaction: Interaction):
         await interaction.response.send_message("Timezone change feature not implemented yet.", ephemeral=True)
 
     elif interaction.data["custom_id"] == "export_data":
-        # Example: send a dummy file
         await interaction.response.send_message("Exporting your match history...", ephemeral=True)
-        # (Add your actual file creation + sending logic here)
+
 
 
 @bot.slash_command(name="ping", description="Check if the bot is alive")
