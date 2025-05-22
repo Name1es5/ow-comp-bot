@@ -6,6 +6,7 @@ import sqlite3
 from dotenv import load_dotenv
 import os
 import datetime
+from collections import Counter
 
 load_dotenv()
 
@@ -13,7 +14,7 @@ intents = nextcord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# --- Create DB and Table ---
+# --- DB Setup ---
 conn = sqlite3.connect("matches.db")
 c = conn.cursor()
 c.execute('''
@@ -29,71 +30,45 @@ CREATE TABLE IF NOT EXISTS matches (
 ''')
 conn.commit()
 
-# --- Hero list per role ---
+# --- Constants ---
 ROLE_HEROES = {
     "Tank": ["Doomfist", "D.Va", "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Zarya"],
-    "DPS": [
-        "Ashe", "Bastion", "Cassidy", "Echo", "Freja", "Genji", "Hanzo", "Junkrat", "Mei",
-        "Pharah", "Reaper", "Sojourn", "Soldier: 76", "Sombra", "Symmetra",
-        "Torbjörn", "Tracer", "Venture", "Widowmaker"
-    ],
-    "Support": [
-        "Ana", "Baptiste", "Brigitte", "Illari", "Kiriko",
-        "Lifeweaver", "Lucio", "Mercy", "Moira", "Zenyatta"
-    ]
+    "DPS": ["Ashe", "Bastion", "Cassidy", "Echo", "Freja", "Genji", "Hanzo", "Junkrat", "Mei", "Pharah", "Reaper", "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbjörn", "Tracer", "Venture", "Widowmaker"],
+    "Support": ["Ana", "Baptiste", "Brigitte", "Illari", "Kiriko", "Lifeweaver", "Lucio", "Mercy", "Moira", "Zenyatta"]
 }
-
-# --- Gamemodes & Maps ---
 GAMEMODE_MAPS = {
-    "Control": ["Antarctic Peninsula", "Busan", "Ilios", "Lijiang Tower", "Nepal", "Oasis", "Samoa"],
-    "Escort": ["Circuit Royal", "Dorado", "Havana", "Junkertown", "Rialto", "Route 66", "Shambali Monastery", "Watchpoint: Gibraltar"],
-    "Push": ["New Queen Street", "Colosseo", "Esperança", "Runasapi"],
-    "Hybrid": ["Blizzard World", "Eichenwalde", "Hollywood", "King's Row", "Midtown", "Numbani", "Paraíso"],
-    "Flashpoint": ["New Junk City", "Suravasa"]
+    "Control": ["Lijiang Tower", "Ilios", "Nepal", "Oasis", "Antarctic Peninsula"],
+    "Escort": ["Havana", "Junkertown", "Circuit Royal", "Rialto", "Watchpoint: Gibraltar"],
+    "Push": ["New Queen Street", "Colosseo", "Esperança"],
+    "Hybrid": ["King's Row", "Eichenwalde", "Midtown", "Numbani", "Hollywood"]
 }
+RANK_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Champion"]
 
 # --- UI Dropdowns ---
 class RoleSelect(Select):
     def __init__(self):
         options = [nextcord.SelectOption(label=role) for role in ROLE_HEROES]
         super().__init__(placeholder="Select your role", min_values=1, max_values=1, options=options)
-
     async def callback(self, interaction: Interaction):
         role = self.values[0]
-        await interaction.response.send_message(
-            f"You selected **{role}**. Now pick one or more heroes.",
-            view=HeroView(role),
-            ephemeral=True
-        )
+        await interaction.response.send_message("Now pick one or more heroes:", view=HeroView(role), ephemeral=True)
 
 class HeroSelect(Select):
     def __init__(self, role):
-        options = [nextcord.SelectOption(label=hero) for hero in ROLE_HEROES[role]]
-        super().__init__(placeholder="Select hero(es)", min_values=1, max_values=len(options), options=options)
+        options = [nextcord.SelectOption(label=h) for h in ROLE_HEROES[role]]
+        super().__init__(placeholder="Select heroes", min_values=1, max_values=len(options), options=options)
         self.role = role
-
     async def callback(self, interaction: Interaction):
-        heroes = self.values  # list of selected heroes
-        await interaction.response.send_message(
-            f"Heroes selected: {', '.join(heroes)}\nNow select a game mode:",
-            view=GamemodeView(self.role, heroes),
-            ephemeral=True
-        )
+        await interaction.response.send_message("Select game mode:", view=GamemodeView(self.role, self.values), ephemeral=True)
 
 class GamemodeSelect(Select):
     def __init__(self, role, heroes):
-        options = [nextcord.SelectOption(label=mode) for mode in GAMEMODE_MAPS]
+        options = [nextcord.SelectOption(label=m) for m in GAMEMODE_MAPS]
         super().__init__(placeholder="Select game mode", min_values=1, max_values=1, options=options)
         self.role = role
         self.heroes = heroes
-
     async def callback(self, interaction: Interaction):
-        mode = self.values[0]
-        await interaction.response.send_message(
-            f"Game mode: **{mode}**\nNow pick a map:",
-            view=MapView(self.role, self.heroes, mode),
-            ephemeral=True
-        )
+        await interaction.response.send_message("Select map:", view=MapView(self.role, self.heroes, self.values[0]), ephemeral=True)
 
 class MapSelect(Select):
     def __init__(self, role, heroes, mode):
@@ -102,14 +77,8 @@ class MapSelect(Select):
         self.role = role
         self.heroes = heroes
         self.mode = mode
-
     async def callback(self, interaction: Interaction):
-        map_ = self.values[0]
-        await interaction.response.send_message(
-            f"Map: **{map_}**\nNow select result:",
-            view=ResultView(self.role, self.heroes, map_),
-            ephemeral=True
-        )
+        await interaction.response.send_message("Select result:", view=ResultView(self.role, self.heroes, self.values[0]), ephemeral=True)
 
 class ResultSelect(Select):
     def __init__(self, role, heroes, map_):
@@ -118,80 +87,65 @@ class ResultSelect(Select):
         self.role = role
         self.heroes = heroes
         self.map_ = map_
-
     async def callback(self, interaction: Interaction):
+        await interaction.response.send_message("Select your rank:", view=RankView(self.role, self.heroes, self.map_, self.values[0]), ephemeral=True)
 
-        result = self.values[0]
-        await interaction.response.send_message("Now enter your **rank**:", ephemeral=True)
+class RankSelect(Select):
+    def __init__(self, role, heroes, map_, result):
+        options = [nextcord.SelectOption(label=r) for r in RANK_TIERS]
+        super().__init__(placeholder="Select rank", min_values=1, max_values=1, options=options)
+        self.role = role
+        self.heroes = heroes
+        self.map_ = map_
+        self.result = result
+    async def callback(self, interaction: Interaction):
+        await interaction.response.send_message("Select rank modifier:", view=ModifierView(self.role, self.heroes, self.map_, self.result, self.values[0]), ephemeral=True)
 
-        def check(m):
-            return m.author == interaction.user and m.channel == interaction.channel
+class ModifierSelect(Select):
+    def __init__(self, role, heroes, map_, result, rank):
+        options = [nextcord.SelectOption(label=str(i)) for i in range(1, 6)]
+        super().__init__(placeholder="Select modifier", min_values=1, max_values=1, options=options)
+        self.role = role
+        self.heroes = heroes
+        self.map_ = map_
+        self.result = result
+        self.rank = rank
+    async def callback(self, interaction: Interaction):
+        rank_full = f"{self.rank} {self.values[0]}"
+        joined_heroes = ", ".join(self.heroes)
+        timestamp = datetime.datetime.now().isoformat()
+        user_id = interaction.user.id
 
-        try:
-            msg = await bot.wait_for("message", timeout=60.0, check=check)
-            rank = msg.content.strip()
-            user_id = interaction.user.id
-            joined_heroes = ", ".join(self.heroes)
-            timestamp = datetime.datetime.now().isoformat()  # generate fresh timestamp
+        with sqlite3.connect("matches.db") as conn:
+            c = conn.cursor()
+            c.execute(
+                "INSERT INTO matches (user_id, hero, role, map, rank, result, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, joined_heroes, self.role, self.map_, rank_full, self.result, timestamp)
+            )
+            conn.commit()
 
-            with sqlite3.connect("matches.db") as conn:
-                c = conn.cursor()
-                c.execute(
-                    "INSERT INTO matches (user_id, hero, role, map, rank, result, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, joined_heroes, self.role, self.map_, rank, result, timestamp)
-                )
-                conn.commit()
+        await interaction.response.send_message("✅ Match recorded!", ephemeral=True)
 
-            await interaction.followup.send(" Match recorded.", ephemeral=True)
-
-        except Exception as e:
-            await interaction.followup.send(" Timed out or error occurred.", ephemeral=True)
-            print(e)
-
-
-# --- View Classes ---
-class RoleView(View):
-    def __init__(self):
-        super().__init__()
-        self.add_item(RoleSelect())
-
-class HeroView(View):
-    def __init__(self, role):
-        super().__init__()
-        self.add_item(HeroSelect(role))
-
-class GamemodeView(View):
-    def __init__(self, role, heroes):
-        super().__init__()
-        self.add_item(GamemodeSelect(role, heroes))
-
-class MapView(View):
-    def __init__(self, role, heroes, mode):
-        super().__init__()
-        self.add_item(MapSelect(role, heroes, mode))
-
-class ResultView(View):
-    def __init__(self, role, heroes, map_):
-        super().__init__()
-        self.add_item(ResultSelect(role, heroes, map_))
+# --- Views ---
+class RoleView(View):     def __init__(self): super().__init__(); self.add_item(RoleSelect())
+class HeroView(View):     def __init__(self, r): super().__init__(); self.add_item(HeroSelect(r))
+class GamemodeView(View): def __init__(self, r, h): super().__init__(); self.add_item(GamemodeSelect(r, h))
+class MapView(View):      def __init__(self, r, h, m): super().__init__(); self.add_item(MapSelect(r, h, m))
+class ResultView(View):   def __init__(self, r, h, m): super().__init__(); self.add_item(ResultSelect(r, h, m))
+class RankView(View):     def __init__(self, r, h, m, res): super().__init__(); self.add_item(RankSelect(r, h, m, res))
+class ModifierView(View): def __init__(self, r, h, m, res, rank): super().__init__(); self.add_item(ModifierSelect(r, h, m, res, rank))
 
 # --- Slash Commands ---
-
-# --- Ping ---
 @bot.slash_command(name="ping", description="Check if the bot is alive")
 async def ping(interaction: Interaction):
     await interaction.response.send_message("🏓 Pong!", ephemeral=True)
 
-# --- Record Match  ---
 @bot.slash_command(name="record", description="Start match recording")
 async def record(interaction: Interaction):
     await interaction.response.send_message("Choose your role:", view=RoleView(), ephemeral=True)
 
-# --- Results ---
 @bot.slash_command(name="result", description="Show your recorded matches")
 async def result(interaction: Interaction):
-    import datetime
-
     user_id = interaction.user.id
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
@@ -199,90 +153,71 @@ async def result(interaction: Interaction):
         rows = c.fetchall()
 
     if not rows:
-        await interaction.response.send_message("You have no recorded matches.", ephemeral=True)
+        await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
-    # Build the embed
-    embed = nextcord.Embed(
-        title="Your Matches",
-        description="Most recent recorded matches:",
-        color=0x00ff99
-    )
-
-    # Build the text table
-    table_header = f"{'Hero(s)':<20} {'Role':<8} {'Map':<22} {'Rank':<10} {'Result':<6} {'Submitted':<20}"
-    table_lines = [table_header, "-" * len(table_header)]
-
-    for hero, role, map_, rank, result, timestamp in rows:
+    table = "```\n{:<20} {:<8} {:<22} {:<10} {:<6} {}\n".format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted")
+    table += "-" * 80 + "\n"
+    for hero, role, map_, rank, result, ts in rows:
         try:
-            dt = datetime.datetime.fromisoformat(timestamp)
-            formatted_time = dt.strftime("%b %d %Y %I:%M%p")
+            time_fmt = datetime.datetime.fromisoformat(ts).strftime("%b %d, %Y %I:%M %p")
         except:
-            formatted_time = "Unknown"
+            time_fmt = "N/A"
+        table += f"{hero:<20} {role:<8} {map_:<22} {rank:<10} {result:<6} {time_fmt}\n"
+    table += "```"
 
-        embed.add_field(
-            name=f"{hero} ({role})",
-            value=f"**Map:** {map_}\n**Rank:** {rank}\n**Result:** {result}\n**Submitted:** {formatted_time}",
-            inline=False
-        )
+    await interaction.response.send_message(table, ephemeral=True)
 
-        line = f"{hero:<20} {role:<8} {map_:<22} {rank:<10} {result:<6} {formatted_time:<20}"
-        table_lines.append(line)
-
-    table_block = "```\n" + "\n".join(table_lines) + "\n```"
-
-    # Send both embed and table text
-    await interaction.response.send_message(embed=embed)
-    await interaction.followup.send(table_block, ephemeral=True)
-
-
-# --- Clear matches table ---
-@bot.slash_command(name="clear", description="Delete all your recorded matches")
-async def clear(interaction: Interaction):
+@bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
+async def top_heroes(interaction: Interaction):
     user_id = interaction.user.id
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
-        c.execute("DELETE FROM matches WHERE user_id = ?", (user_id,))
+        c.execute("SELECT hero FROM matches WHERE user_id = ?", (user_id,))
+        all_heroes = [hero.strip() for row in c.fetchall() for hero in row[0].split(",")]
+
+    if not all_heroes:
+        await interaction.response.send_message("No matches recorded.", ephemeral=True)
+        return
+
+    counter = Counter(all_heroes).most_common(3)
+    total = sum(dict(counter).values())
+
+    embed = nextcord.Embed(title="Top 3 Most Played Heroes", color=0x00ff99)
+    for hero, count in counter:
+        percent = (count / total) * 100
+        embed.add_field(name=hero, value=f"{count} games ({percent:.1f}%)", inline=False)
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.slash_command(name="clear", description="Delete all your recorded matches")
+async def clear(interaction: Interaction):
+    with sqlite3.connect("matches.db") as conn:
+        c = conn.cursor()
+        c.execute("DELETE FROM matches WHERE user_id = ?", (interaction.user.id,))
         conn.commit()
+    await interaction.response.send_message("🗑️ Match history cleared.", ephemeral=True)
 
-    await interaction.response.send_message("🗑️ Your match history has been cleared.", ephemeral=True)
-
-#--- Delete most recent match ---
 @bot.slash_command(name="delete_last", description="Delete your most recently recorded match")
 async def delete_last(interaction: Interaction):
     user_id = interaction.user.id
-
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
-        # Select the most recent match by rowid (insert order)
-        c.execute(
-            "SELECT rowid, hero, map FROM matches WHERE user_id = ? ORDER BY rowid DESC LIMIT 1",
-            (user_id,)
-        )
-        last_match = c.fetchone()
-
-        if last_match is None:
-            await interaction.response.send_message("❌ You have no recorded matches.", ephemeral=True)
-            return
-
-        rowid, hero, map_ = last_match
-        c.execute("DELETE FROM matches WHERE rowid = ?", (rowid,))
-        conn.commit()
-
-    await interaction.response.send_message(
-        f"🗑️ Deleted your last match: **{hero}** on **{map_}**", ephemeral=True
-    )
+        c.execute("SELECT rowid FROM matches WHERE user_id = ? ORDER BY rowid DESC LIMIT 1", (user_id,))
+        row = c.fetchone()
+        if row:
+            c.execute("DELETE FROM matches WHERE rowid = ?", (row[0],))
+            conn.commit()
+            await interaction.response.send_message("🗑️ Last match deleted.", ephemeral=True)
+        else:
+            await interaction.response.send_message("No matches to delete.", ephemeral=True)
 
 @bot.event
 async def on_ready():
     if not hasattr(bot, "synced"):
         await bot.sync_application_commands()
         bot.synced = True
-    print(f"✅ Bot ready as {bot.user}")
+    print(f"✅ Bot is online as {bot.user}")
 
-
-
-# --- Run the bot ---
+# --- Start Bot ---
 bot.run(os.getenv("BOT_TOKEN"))
-
-
