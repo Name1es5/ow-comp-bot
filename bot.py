@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-bot.run(os.getenv("BOT_TOKEN"))
-
 
 intents = nextcord.Intents.default()
 intents.message_content = True
