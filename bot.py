@@ -124,7 +124,7 @@ async def top_heroes(interaction: Interaction):
         all_heroes = [h.strip() for row in c.fetchall() for h in row[0].split(",")]
 
     if not all_heroes:
-        await interaction.response.send_message("No data recorded.", ephemeral=True)
+        await interaction.response.send_message("No data recorded.")
         return
 
     counter = Counter(all_heroes).most_common(3)
@@ -149,7 +149,7 @@ async def help_cmd(interaction: Interaction):
     embed.add_field(name="/ping", value="Bot health check.", inline=False)
     embed.add_field(name="/help", value="Show this help message.", inline=False)
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.response.send_message(embed=embed)
 
 # Ping
 @bot.slash_command(name="ping", description="Check if bot is responsive.")
