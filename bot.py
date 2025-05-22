@@ -2,6 +2,7 @@ import nextcord
 from nextcord.ext import commands
 from nextcord import Interaction, SlashOption
 from nextcord.ui import View, Button
+from nextcord.ui import Select, View
 from nextcord import Embed, ButtonStyle
 import os
 import datetime
@@ -166,16 +167,17 @@ async def result(interaction: Interaction):
 
     embed = Embed(
         title="Your Matches",
-        description=f"**Season** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nMost recent shown first.",
+        description=f"**Season** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nOldest match shown first.",
         color=0x00ff99
     )
 
-    for i, row in enumerate(rows):
+    for i, row in enumerate(reversed(rows)):
         dt = datetime.datetime.fromisoformat(row['timestamp'])
         formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         emoji = "✅" if row['result'].lower() == "win" else "❌"
+        match_number = i + 1
         embed.add_field(
-            name=f"{emoji} {i + 1}. {row['map']} [{row['result']}]",
+            name=f"{emoji} {match_number}. {row['map']} [{row['result']}]",
             value=f"**Role:** {row['role']}, **Rank:** {row['rank']}, **Time:** {formatted}\n**Heroes:** {row['hero']}",
             inline=False
         )
