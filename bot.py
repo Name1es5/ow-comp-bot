@@ -103,7 +103,21 @@ async def autocomplete_role(interaction: Interaction, input: str):
     
 @record.on_autocomplete("hero")
 async def autocomplete_hero(interaction: Interaction, input: str):
-    return [h for h in ALL_HEROES if input.lower() in h.lower()][:25]
+    role = None
+    options = interaction.data.get("options", [])
+
+    # Handle both nested and flat command structures
+    for option in options:
+        if option["name"] == "role":
+            role = option.get("value")
+        elif option["name"] == "hero" and "options" in option:
+            for sub in option["options"]:
+                if sub["name"] == "role":
+                    role = sub.get("value")
+
+    hero_pool = ROLE_HEROES.get(role, ALL_HEROES)
+    return [h for h in hero_pool if input.lower() in h.lower()][:25]
+
 
 @record.on_autocomplete("map")
 async def autocomplete_map(interaction: Interaction, input: str):
