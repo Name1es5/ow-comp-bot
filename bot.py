@@ -1,16 +1,17 @@
+""
 import nextcord
 from nextcord.ext import commands
 from nextcord import Interaction, SlashOption
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from nextcord.ui import View, Button
+from nextcord import Embed, ButtonStyle, File, InteractionType
 from dotenv import load_dotenv
 import os
 import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import csv
 import tempfile
 from collections import Counter
-from nextcord.ui import View, Button
-from nextcord import Embed, ButtonStyle
 
 load_dotenv()
 intents = nextcord.Intents.default()
@@ -19,12 +20,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # --- PostgreSQL Connection ---
 def get_db_connection():
-    return psycopg2.connect(
-        os.getenv("DATABASE_URL"),
-        cursor_factory=RealDictCursor
-    )
+    return psycopg2.connect(os.getenv("DATABASE_URL"), cursor_factory=RealDictCursor)
 
-# --- Create table if not exists ---
+# --- Initialize DB ---
 def init_db():
     with get_db_connection() as conn:
         with conn.cursor() as c:
@@ -46,59 +44,145 @@ def init_db():
 SEASON_1_START = datetime.datetime(2022, 10, 4)
 SEASON_DURATION_WEEKS = 9
 
-ROLE_HEROES = { ... }  # same as before
-GAMEMODE_MAPS = { ... }  # same as before
+ROLE_HEROES = {
+    "Tank": ["Doomfist", "D.Va", "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Zarya"],
+    "DPS": ["Ashe", "Bastion", "Cassidy", "Echo", "Freja", "Genji", "Hanzo", "Junkrat", "Mei", "Pharah", "Reaper",
+            "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbjörn", "Tracer", "Venture", "Widowmaker"],
+    "Support": ["Ana", "Baptiste", "Brigitte", "Illari", "Kiriko", "Lifeweaver", "Lucio", "Mercy", "Moira", "Zenyatta"]
+}
+
+GAMEMODE_MAPS = {
+    "Control": ["Antarctic Peninsula", "Busan", "Ilios", "Lijiang Tower", "Nepal", "Oasis", "Samoa"],
+    "Escort": ["Circuit Royal", "Dorado", "Havana", "Junkertown", "Rialto", "Route 66", "Shambali Monastery", "Watchpoint: Gibraltar"],
+    "Push": ["Colosseo", "Esperança", "New Queen Street", "Runasapi"],
+    "Hybrid": ["Blizzard World", "Eichenwalde", "Hollywood", "King's Row", "Midtown", "Numbani", "Paraíso"],
+    "Flashpoint": ["New Junk City", "Suravasa"]
+}
+
 ALL_HEROES = sum(ROLE_HEROES.values(), [])
 ALL_MAPS = [m for maps in GAMEMODE_MAPS.values() for m in maps]
 RANK_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Champion"]
 VALID_RESULTS = ["Win", "Loss"]
 
-class SettingsView(View): ...  # unchanged
+class SettingsView(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(Button(label="Change Timezone", custom_id="change_timezone", style=ButtonStyle.primary))
+        self.add_item(Button(label="Export Data", custom_id="export_data", style=ButtonStyle.success))
+        self.add_item(Button(label="GitHub", url="https://github.com/your-repo", style=ButtonStyle.link))
 
-@bot.slash_command(name="settings", description="Configure your personal preferences")
-async def settings(interaction: Interaction): ...
+@bot.slash_command(name="record", description="Record a match")
+async def record(
+    interaction: Interaction,
+    role: str = SlashOption(name="role", description="Enter role (Tank, DPS, Support)", required=True),
+    gamemode: str = SlashOption(name="gamemode", description="Enter gamemode", required=True,
+        choices=["Control", "Escort", "Push", "Hybrid", "Flashpoint"]),
+    hero: str = SlashOption(name="hero", description="Enter hero name", required=True),
+    map: str = SlashOption(name="map", description="Enter map name", required=True),
+    rank: str = SlashOption(name="rank", description="Enter rank tier", required=True),
+    modifier: int = SlashOption(name="modifier", description="Rank modifier (1-5)", required=True),
+    result: str = SlashOption(name="result", description="Match result (Win/Loss)", required=True)
+):
+    rank_full = f"{rank} {modifier}"
+    timestamp = datetime.datetime.utcnow().isoformat()
 
-@bot.listen("on_interaction")
-async def on_button_click(interaction: Interaction):
-    if interaction.type != nextcord.InteractionType.component:
+    with get_db_connection() as conn:
+        with conn.cursor() as c:
+            c.execute('''
+                INSERT INTO matches (user_id, hero, role, gamemode, map, rank, result, timestamp)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (interaction.user.id, hero, role, gamemode, map, rank_full, result, timestamp))
+            conn.commit()
+
+    await interaction.response.send_message("Match recorded!", ephemeral=True)
+
+@bot.slash_command(name="result", description="Show your recorded matches for the current season")
+async def result(interaction: Interaction):
+    user_id = interaction.user.id
+    season_start = SEASON_1_START + datetime.timedelta(weeks=SEASON_DURATION_WEEKS * ((datetime.datetime.utcnow() - SEASON_1_START).days // (SEASON_DURATION_WEEKS * 7)))
+
+    with get_db_connection() as conn:
+        with conn.cursor() as c:
+            c.execute('''
+                SELECT hero, role, map, rank, result, timestamp FROM matches
+                WHERE user_id = %s AND timestamp >= %s
+                ORDER BY timestamp DESC
+            ''', (user_id, season_start.isoformat()))
+            rows = c.fetchall()
+
+    if not rows:
+        await interaction.response.send_message("No matches recorded this season.", ephemeral=True)
         return
 
-    custom_id = interaction.data.get("custom_id")
-    if custom_id == "export_data":
-        user_id = interaction.user.id
-        with get_db_connection() as conn:
-            with conn.cursor() as c:
-                c.execute('''
-                    SELECT hero, role, gamemode, map, rank, result, timestamp FROM matches
-                    WHERE user_id = %s
-                    ORDER BY timestamp DESC
-                ''', (user_id,))
-                rows = c.fetchall()
+    embed = nextcord.Embed(
+        title="Your Matches",
+        description=f"**Season** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nMost recent shown first.",
+        color=0x00ff99
+    )
 
-        if not rows:
-            await interaction.response.send_message("You have no recorded matches to export.", ephemeral=True)
-            return
+    for i, row in enumerate(rows):
+        dt = datetime.datetime.fromisoformat(row['timestamp'])
+        formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
+        emoji = "✅" if row['result'].lower() == "win" else "❌"
+        embed.add_field(
+            name=f"{emoji} {i + 1}. {row['map']} [{row['result']}]",
+            value=f"**Role:** {row['role']}, **Rank:** {row['rank']}, **Time:** {formatted}\n**Heroes:** {row['hero']}",
+            inline=False
+        )
 
-        with tempfile.NamedTemporaryFile(mode="w", newline="", delete=False, suffix=".csv") as tmp_file:
-            writer = csv.writer(tmp_file)
-            writer.writerow(["Hero", "Role", "Gamemode", "Map", "Rank", "Result", "Timestamp"])
-            for row in rows:
-                writer.writerow(row.values())
-            temp_file_path = tmp_file.name
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        file_to_send = nextcord.File(temp_file_path, filename="match_history.csv")
-        await interaction.response.send_message("Here is your exported match history:", file=file_to_send, ephemeral=True)
+@bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
+async def top_heroes(interaction: Interaction):
+    user_id = interaction.user.id
+    with get_db_connection() as conn:
+        with conn.cursor() as c:
+            c.execute("SELECT hero FROM matches WHERE user_id = %s", (user_id,))
+            all_heroes = [row['hero'] for row in c.fetchall()]
 
-# Replace all other SQLite blocks with equivalent get_db_connection() + %s queries.
-# For example, in /record, /result, /top_heroes, /clear, /delete_last
+    if not all_heroes:
+        await interaction.response.send_message("No matches recorded.", ephemeral=True)
+        return
 
-# Finally:
+    counter = Counter(all_heroes).most_common(3)
+    total = sum(dict(counter).values())
+    embed = nextcord.Embed(title="Top 3 Most Played Heroes", color=0x00ff99)
+    for hero, count in counter:
+        percent = (count / total) * 100
+        embed.add_field(name=hero, value=f"{count} games ({percent:.1f}%)", inline=False)
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.slash_command(name="clear", description="Delete all your recorded matches")
+async def clear(interaction: Interaction):
+    user_id = interaction.user.id
+    with get_db_connection() as conn:
+        with conn.cursor() as c:
+            c.execute("DELETE FROM matches WHERE user_id = %s", (user_id,))
+            conn.commit()
+    await interaction.response.send_message("Your match history has been cleared.", ephemeral=True)
+
+@bot.slash_command(name="delete_last", description="Delete your most recent match")
+async def delete_last(interaction: Interaction):
+    user_id = interaction.user.id
+    with get_db_connection() as conn:
+        with conn.cursor() as c:
+            c.execute("SELECT timestamp FROM matches WHERE user_id = %s ORDER BY timestamp DESC LIMIT 1", (user_id,))
+            row = c.fetchone()
+            if row:
+                c.execute("DELETE FROM matches WHERE user_id = %s AND timestamp = %s", (user_id, row['timestamp']))
+                conn.commit()
+                await interaction.response.send_message("Last match deleted.", ephemeral=True)
+            else:
+                await interaction.response.send_message("No matches to delete.", ephemeral=True)
+
 @bot.event
 async def on_ready():
     if not hasattr(bot, "synced"):
         await bot.sync_application_commands()
         bot.synced = True
     init_db()
-    print(f"✅ Bot online as {bot.user}")
+    print(f" Bot online as {bot.user}")
 
 bot.run(os.getenv("BOT_TOKEN"))
+""
