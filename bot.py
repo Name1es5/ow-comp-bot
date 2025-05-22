@@ -136,14 +136,19 @@ class RankView(View):     def __init__(self, r, h, m, res): super().__init__(); 
 class ModifierView(View): def __init__(self, r, h, m, res, rank): super().__init__(); self.add_item(ModifierSelect(r, h, m, res, rank))
 
 # --- Slash Commands ---
+
+# --- Ping bot ---
 @bot.slash_command(name="ping", description="Check if the bot is alive")
 async def ping(interaction: Interaction):
     await interaction.response.send_message("🏓 Pong!", ephemeral=True)
 
+# --- Record match ---
 @bot.slash_command(name="record", description="Start match recording")
 async def record(interaction: Interaction):
     await interaction.response.send_message("Choose your role:", view=RoleView(), ephemeral=True)
 
+
+# --- Result table ---
 @bot.slash_command(name="result", description="Show your recorded matches")
 async def result(interaction: Interaction):
     user_id = interaction.user.id
@@ -160,7 +165,8 @@ async def result(interaction: Interaction):
     table += "-" * 80 + "\n"
     for hero, role, map_, rank, result, ts in rows:
         try:
-            time_fmt = datetime.datetime.fromisoformat(ts).strftime("%b %d, %Y %I:%M %p")
+            dt = datetime.datetime.fromisoformat(ts)
+            time_fmt = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         except:
             time_fmt = "N/A"
         table += f"{hero:<20} {role:<8} {map_:<22} {rank:<10} {result:<6} {time_fmt}\n"
@@ -168,6 +174,9 @@ async def result(interaction: Interaction):
 
     await interaction.response.send_message(table, ephemeral=True)
 
+
+
+# --- Top Heroes played ---
 @bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
 async def top_heroes(interaction: Interaction):
     user_id = interaction.user.id
@@ -190,6 +199,8 @@ async def top_heroes(interaction: Interaction):
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
+
+# --- Clear table ---
 @bot.slash_command(name="clear", description="Delete all your recorded matches")
 async def clear(interaction: Interaction):
     with sqlite3.connect("matches.db") as conn:
@@ -198,6 +209,8 @@ async def clear(interaction: Interaction):
         conn.commit()
     await interaction.response.send_message("🗑️ Match history cleared.", ephemeral=True)
 
+
+# --- Delete last match ---
 @bot.slash_command(name="delete_last", description="Delete your most recently recorded match")
 async def delete_last(interaction: Interaction):
     user_id = interaction.user.id
