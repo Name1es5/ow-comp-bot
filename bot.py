@@ -167,7 +167,7 @@ class ModifierView(View):
 # --- Ping bot ---
 @bot.slash_command(name="ping", description="Check if the bot is alive")
 async def ping(interaction: Interaction):
-    await interaction.response.send_message("🏓 Pong!", ephemeral=True)
+    await interaction.response.send_message("🏓 Pong!")
 
 # --- Record match ---
 @bot.slash_command(name="record", description="Start match recording")
