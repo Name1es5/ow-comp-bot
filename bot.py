@@ -229,14 +229,12 @@ async def result(interaction: Interaction):
         await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
-    # ASCII header with season
-    response = "```\n"
-    response += "───────────────\n"
-    response += f"  Your Matches\n"
-    response += f"   Season {CURRENT_SEASON}\n"
-    response += "───────────────\n"
+    embed = nextcord.Embed(
+        title="📊 Your Matches",
+        description=f"**Season {CURRENT_SEASON}**\nMost recent match shown first.",
+        color=0x00ff99
+    )
 
-    # Build entries
     for i, (hero, role, map_, rank, result, ts) in enumerate(rows, start=1):
         try:
             dt = datetime.datetime.fromisoformat(ts)
@@ -244,14 +242,14 @@ async def result(interaction: Interaction):
         except:
             time_fmt = "N/A"
 
-        response += (
-            f"{len(rows)-i+1}. {map_} [{result}]\n"
-            f"   Role: {role}, Rank: {rank}, Time: {time_fmt}\n"
-            f"   Heroes: {hero}\n\n"
+        embed.add_field(
+            name=f"{i}. {map_} [{result}]",
+            value=f"**Role:** {role}\n**Rank:** {rank}\n**Time:** {time_fmt}\n**Heroes:** {hero}",
+            inline=False
         )
 
-    response += "```"
-    await interaction.response.send_message(response)
+    await interaction.response.send_message(embed=embed)
+
 
 
 
