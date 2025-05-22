@@ -5,6 +5,7 @@ from nextcord.ui import Select, View
 import sqlite3
 from dotenv import load_dotenv
 import os
+import datetime
 
 load_dotenv()
 
@@ -22,7 +23,8 @@ CREATE TABLE IF NOT EXISTS matches (
     role TEXT,
     map TEXT,
     rank TEXT,
-    result TEXT
+    result TEXT,
+    timestamp TEXT
 )
 ''')
 conn.commit()
@@ -118,6 +120,7 @@ class ResultSelect(Select):
         self.map_ = map_
 
     async def callback(self, interaction: Interaction):
+
         result = self.values[0]
         await interaction.response.send_message("Now enter your **rank**:", ephemeral=True)
 
@@ -129,19 +132,22 @@ class ResultSelect(Select):
             rank = msg.content.strip()
             user_id = interaction.user.id
             joined_heroes = ", ".join(self.heroes)
+            timestamp = datetime.datetime.now().isoformat()  # generate fresh timestamp
 
             with sqlite3.connect("matches.db") as conn:
                 c = conn.cursor()
                 c.execute(
-                    "INSERT INTO matches (user_id, hero, role, map, rank, result) VALUES (?, ?, ?, ?, ?, ?)",
-                    (user_id, joined_heroes, self.role, self.map_, rank, result)
+                    "INSERT INTO matches (user_id, hero, role, map, rank, result, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, joined_heroes, self.role, self.map_, rank, result, timestamp)
                 )
                 conn.commit()
 
-            await interaction.followup.send("✅ Match recorded.", ephemeral=True)
+            await interaction.followup.send(" Match recorded.", ephemeral=True)
+
         except Exception as e:
-            await interaction.followup.send("❌ Timed out or error occurred.", ephemeral=True)
+            await interaction.followup.send(" Timed out or error occurred.", ephemeral=True)
             print(e)
+
 
 # --- View Classes ---
 class RoleView(View):
@@ -184,10 +190,12 @@ async def record(interaction: Interaction):
 # --- Results ---
 @bot.slash_command(name="result", description="Show your recorded matches")
 async def result(interaction: Interaction):
+    import datetime
+
     user_id = interaction.user.id
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
-        c.execute("SELECT hero, role, map, rank, result FROM matches WHERE user_id = ?", (user_id,))
+        c.execute("SELECT hero, role, map, rank, result, timestamp FROM matches WHERE user_id = ?", (user_id,))
         rows = c.fetchall()
 
     if not rows:
@@ -200,15 +208,20 @@ async def result(interaction: Interaction):
         color=0x00ff99
     )
 
-    for hero, role, map_, rank, result in rows:
+    for hero, role, map_, rank, result, timestamp in rows:
+        try:
+            dt = datetime.datetime.fromisoformat(timestamp)
+            formatted_time = dt.strftime("%b %d, %Y %I:%M %p")
+        except:
+            formatted_time = "Unknown"
+
         embed.add_field(
             name=f"{hero} ({role})",
-            value=f"**Map:** {map_}\n**Rank:** {rank}\n**Result:** {result}",
+            value=f"**Map:** {map_}\n**Rank:** {rank}\n**Result:** {result}\n**Submitted:** {formatted_time}",
             inline=False
         )
 
     await interaction.response.send_message(embed=embed)
-
 
 # --- Clear matches table ---
 @bot.slash_command(name="clear", description="Delete all your recorded matches")
