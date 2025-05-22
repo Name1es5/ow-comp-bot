@@ -37,11 +37,46 @@ ROLE_HEROES = {
     "Support": ["Ana", "Baptiste", "Brigitte", "Illari", "Kiriko", "Lifeweaver", "Lucio", "Mercy", "Moira", "Zenyatta"]
 }
 GAMEMODE_MAPS = {
-    "Control": ["Lijiang Tower", "Ilios", "Nepal", "Oasis", "Antarctic Peninsula"],
-    "Escort": ["Havana", "Junkertown", "Circuit Royal", "Rialto", "Watchpoint: Gibraltar"],
-    "Push": ["New Queen Street", "Colosseo", "Esperança"],
-    "Hybrid": ["King's Row", "Eichenwalde", "Midtown", "Numbani", "Hollywood"]
+    "Control": [
+        "Antarctic Peninsula",
+        "Busan",
+        "Ilios",
+        "Lijiang Tower",
+        "Nepal",
+        "Oasis",
+        "Samoa"
+    ],
+    "Escort": [
+        "Circuit Royal",
+        "Dorado",
+        "Havana",
+        "Junkertown",
+        "Rialto",
+        "Route 66",
+        "Shambali Monastery",
+        "Watchpoint: Gibraltar"
+    ],
+    "Push": [
+        "Colosseo",
+        "Esperança",
+        "New Queen Street",
+        "Runasapi"
+    ],
+    "Hybrid": [
+        "Blizzard World",
+        "Eichenwalde",
+        "Hollywood",
+        "King's Row",
+        "Midtown",
+        "Numbani",
+        "Paraíso"
+    ],
+    "Flashpoint": [
+        "New Junk City",
+        "Suravasa"
+    ]
 }
+
 RANK_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Champion"]
 
 # --- UI Dropdowns ---
