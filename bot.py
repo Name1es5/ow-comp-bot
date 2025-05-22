@@ -216,32 +216,33 @@ async def result(interaction: Interaction):
     user_id = interaction.user.id
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
-        c.execute("SELECT hero, role, map, rank, result, timestamp FROM matches WHERE user_id = ?", (user_id,))
+        c.execute("""
+            SELECT hero, role, map, rank, result, timestamp 
+            FROM matches 
+            WHERE user_id = ? 
+            ORDER BY timestamp DESC
+        """, (user_id,))
         rows = c.fetchall()
 
     if not rows:
         await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
-    header_format = "{:<20} {:<8} {:<20} {:<11} {:<7} {}"
-    table = "```\n"
-    table += header_format.format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted") + "\n"
-
-    separator = "-" * len(header_format.format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted"))
-    table += separator + "\n"
-
-    for hero, role, map_, rank, result, ts in rows:
+    response = "```"
+    total = len(rows)
+    for idx, (hero, role, map_, rank, result, ts) in enumerate(rows[::-1], 1):
         try:
             dt = datetime.datetime.fromisoformat(ts)
             time_fmt = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         except:
             time_fmt = "N/A"
-        table += header_format.format(hero, role, map_, rank, result, time_fmt) + "\n"
 
-    table += "```"
+        response += f"{total - idx + 1}. {map_} [{result}]\n"
+        response += f"   Role: {role}, Rank: {rank}, Time: {time_fmt}\n"
+        response += f"   Heroes: {hero}\n\n"
+    response += "```"
 
-    # This line was incorrectly indented in your version
-    await interaction.response.send_message(table)
+    await interaction.response.send_message(response)
 
 
 
