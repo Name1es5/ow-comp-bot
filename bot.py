@@ -188,7 +188,7 @@ async def result(interaction: Interaction):
         await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
-    table = "```\n{:<20} {:<8} {:<22} {:<10} {:<6} {}\n".format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted")
+    table = "```\n{:<20} {:<8} {:<22} {:<13} {:<6} {}\n".format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted")
     table += "-" * 80 + "\n"
     for hero, role, map_, rank, result, ts in rows:
         try:
@@ -199,7 +199,7 @@ async def result(interaction: Interaction):
         table += f"{hero:<20} {role:<8} {map_:<22} {rank:<10} {result:<6} {time_fmt}\n"
     table += "```"
 
-    await interaction.response.send_message(table, ephemeral=True)
+    await interaction.response.send_message(table)
 
 
 
@@ -224,7 +224,7 @@ async def top_heroes(interaction: Interaction):
         percent = (count / total) * 100
         embed.add_field(name=hero, value=f"{count} games ({percent:.1f}%)", inline=False)
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.response.send_message(embed=embed)
 
 
 # --- Clear table ---
