@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import os
 import datetime
 from collections import Counter
+from nextcord.ui import View, Button
+from nextcord import Interaction, Embed, ButtonStyle
 
 load_dotenv()
 intents = nextcord.Intents.default()
@@ -57,7 +59,39 @@ ALL_MAPS = [m for maps in GAMEMODE_MAPS.values() for m in maps]
 RANK_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Champion"]
 VALID_RESULTS = ["Win", "Loss"]
 
+# --- Settings View ---
+class SettingsView(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+        self.add_item(Button(label="Change Timezone", custom_id="change_timezone", style=ButtonStyle.primary))
+        self.add_item(Button(label="Export Data", custom_id="export_data", style=ButtonStyle.success))
+        self.add_item(Button(label="GitHub", url="https://github.com/your-repo", style=ButtonStyle.link))
+
 # --- Slash Commands ---
+
+@bot.slash_command(name="settings", description="Configure your personal preferences")
+async def settings(interaction: Interaction):
+    embed = Embed(title="⚙️ Settings", description="Manage your match tracker preferences.", color=0x00ff99)
+    embed.add_field(name="Change Timezone", value="Set your preferred time display", inline=False)
+    embed.add_field(name="Export Data", value="Download your match history as a file", inline=False)
+    embed.add_field(name="GitHub", value="[Source Code](https://github.com/your-repo)", inline=False)
+
+    await interaction.response.send_message(embed=embed, view=SettingsView(), ephemeral=True)
+    
+    @bot.listen("on_interaction")
+async def on_button_click(interaction: Interaction):
+    if interaction.type.name != "component":
+        return
+
+    if interaction.data["custom_id"] == "change_timezone":
+        await interaction.response.send_message("Timezone change feature not implemented yet.", ephemeral=True)
+
+    elif interaction.data["custom_id"] == "export_data":
+        # Example: send a dummy file
+        await interaction.response.send_message("Exporting your match history...", ephemeral=True)
+        # (Add your actual file creation + sending logic here)
+
 
 @bot.slash_command(name="ping", description="Check if the bot is alive")
 async def ping(interaction: Interaction):
