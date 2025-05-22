@@ -79,8 +79,19 @@ GAMEMODE_MAPS = {
 
 RANK_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Champion"]
 
-CURRENT_SEASON = 16  # Update this manually when a new season starts
+# Define the start date of Season 1
+SEASON_1_START = datetime.datetime(2022, 10, 4)
+SEASON_DURATION_WEEKS = 9
 
+def get_current_season():
+    now = datetime.datetime.now()
+    delta = now - SEASON_1_START
+    # Calculate the number of full seasons that have passed
+    season_number = (delta.days // (SEASON_DURATION_WEEKS * 7)) + 1
+    return season_number
+
+# Usage
+CURRENT_SEASON = get_current_season()
 
 # --- UI Dropdowns ---
 class RoleSelect(Select):
@@ -217,21 +228,26 @@ async def record(interaction: Interaction):
 @bot.slash_command(name="result", description="Show your recorded matches")
 async def result(interaction: Interaction):
     user_id = interaction.user.id
+    current_season = get_current_season()
+    # Calculate the start date of the current season
+    season_start = SEASON_1_START + datetime.timedelta(weeks=SEASON_DURATION_WEEKS * (current_season - 1))
+
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
+        # Fetch matches for the current season
         c.execute(
-            "SELECT hero, role, map, rank, result, timestamp FROM matches WHERE user_id = ? ORDER BY rowid DESC",
-            (user_id,)
+            "SELECT hero, role, map, rank, result, timestamp FROM matches WHERE user_id = ? AND timestamp >= ? ORDER BY rowid DESC",
+            (user_id, season_start.isoformat())
         )
         rows = c.fetchall()
 
     if not rows:
-        await interaction.response.send_message("No matches recorded.", ephemeral=True)
+        await interaction.response.send_message("No matches recorded for the current season.", ephemeral=True)
         return
 
     embed = nextcord.Embed(
         title="📊 Your Matches",
-        description=f"**Season {CURRENT_SEASON}**\nMost recent match shown first.",
+        description=f"**Season {current_season}** — {len(rows)} match{'es' if len(rows) != 1 else ''} recorded\nMost recent shown first.",
         color=0x00ff99
     )
 
@@ -244,14 +260,11 @@ async def result(interaction: Interaction):
 
         embed.add_field(
             name=f"{i}. {map_} [{result}]",
-            value=f"**Role:** {role}\n**Rank:** {rank}\n**Time:** {time_fmt}\n**Heroes:** {hero}",
+            value=f"**Role:** {role}, **Rank:** {rank}, **Time:** {time_fmt}\n**Heroes:** {hero}",
             inline=False
         )
 
     await interaction.response.send_message(embed=embed)
-
-
-
 
 
 # --- Top Heroes played ---
