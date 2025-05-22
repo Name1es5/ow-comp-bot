@@ -161,7 +161,7 @@ async def result(interaction: Interaction):
             rows = c.fetchall()
 
     if not rows:
-        await interaction.response.send_message("No matches recorded this season.", ephemeral=True)
+        await interaction.response.send_message("No matches recorded this season.")
         return
 
     embed = Embed(
@@ -177,11 +177,11 @@ async def result(interaction: Interaction):
         embed.add_field(
             name=f"{emoji} {i + 1}. {row['map']} [{row['result']}]",
             value=f"**Role:** {row['role']}, **Rank:** {row['rank']}, **Time:** {formatted}\n**Heroes:** {row['hero']}",
-        i   nline=False
-    )
-
+            inline=False
+        )
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 @bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
 async def top_heroes(interaction: Interaction):
@@ -192,7 +192,7 @@ async def top_heroes(interaction: Interaction):
             all_heroes = [row['hero'] for row in c.fetchall()]
 
     if not all_heroes:
-        await interaction.response.send_message("No matches recorded.", ephemeral=True)
+        await interaction.response.send_message("No matches recorded.")
         return
 
     counter = Counter(all_heroes).most_common(3)
@@ -202,7 +202,7 @@ async def top_heroes(interaction: Interaction):
         percent = (count / total) * 100
         embed.add_field(name=hero, value=f"{count} games ({percent:.1f}%)", inline=False)
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.response.send_message(embed=embed
 
 @bot.slash_command(name="clear", description="Delete all your recorded matches")
 async def clear(interaction: Interaction):
