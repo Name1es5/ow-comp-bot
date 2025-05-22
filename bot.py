@@ -202,16 +202,21 @@ async def result(interaction: Interaction):
         await interaction.response.send_message("You have no recorded matches.", ephemeral=True)
         return
 
+    # Build the embed
     embed = nextcord.Embed(
         title="Your Matches",
-        description="Here are your most recent recorded matches:",
+        description="Most recent recorded matches:",
         color=0x00ff99
     )
+
+    # Build the text table
+    table_header = f"{'Hero(s)':<20} {'Role':<8} {'Map':<22} {'Rank':<10} {'Result':<6} {'Submitted':<20}"
+    table_lines = [table_header, "-" * len(table_header)]
 
     for hero, role, map_, rank, result, timestamp in rows:
         try:
             dt = datetime.datetime.fromisoformat(timestamp)
-            formatted_time = dt.strftime("%b %d, %Y %I:%M %p")
+            formatted_time = dt.strftime("%b %d %Y %I:%M%p")
         except:
             formatted_time = "Unknown"
 
@@ -221,7 +226,15 @@ async def result(interaction: Interaction):
             inline=False
         )
 
+        line = f"{hero:<20} {role:<8} {map_:<22} {rank:<10} {result:<6} {formatted_time:<20}"
+        table_lines.append(line)
+
+    table_block = "```\n" + "\n".join(table_lines) + "\n```"
+
+    # Send both embed and table text
     await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(table_block, ephemeral=True)
+
 
 # --- Clear matches table ---
 @bot.slash_command(name="clear", description="Delete all your recorded matches")
