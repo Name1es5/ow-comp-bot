@@ -223,16 +223,26 @@ async def result(interaction: Interaction):
         await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
-    table = "```\n{:<20} {:<8} {:<20} {:<11} {:<7} {}\n".format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted")
-    table += "_" * 80 + "\n"
-    for hero, role, map_, rank, result, ts in rows:
-        try:
-            dt = datetime.datetime.fromisoformat(ts)
-            time_fmt = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
-        except:
-            time_fmt = "N/A"
-        table += f"{hero:<20} {role:<8} {map_:<20} {rank:<11} {result:<7} {time_fmt}\n"
-    table += "```"
+header_format = "{:<20} {:<8} {:<20} {:<11} {:<7} {}"
+table = "```\n"
+table += header_format.format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted") + "\n"
+
+# Compute exact length of that formatted header
+separator = "-" * len(header_format.format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted"))
+table += separator + "\n"
+
+# Then continue adding data rows the same way
+for hero, role, map_, rank, result, ts in rows:
+    try:
+        dt = datetime.datetime.fromisoformat(ts)
+        time_fmt = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
+    except:
+        time_fmt = "N/A"
+
+    table += header_format.format(hero, role, map_, rank, result, time_fmt) + "\n"
+
+table += "```"
+
 
     await interaction.response.send_message(table)
 
@@ -293,6 +303,26 @@ async def on_ready():
         await bot.sync_application_commands()
         bot.synced = True
     print(f"✅ Bot is online as {bot.user}")
+    
+# --- See all commands ---
+@bot.slash_command(name="help", description="List all available commands and their descriptions")
+async def help_command(interaction: Interaction):
+    embed = nextcord.Embed(
+        title="OW Comp Bot Commands",
+        description="Here are the available commands:",
+        color=0x00ff99
+    )
+
+    embed.add_field(name="/record", value="Start match recording.", inline=False)
+    embed.add_field(name="/result", value="Show your recorded matches.", inline=False)
+    embed.add_field(name="/top", value="Show your top 3 most played heroes.", inline=False)
+    embed.add_field(name="/clear", value="Delete all your recorded matches.", inline=False)
+    embed.add_field(name="/delete_last", value="Delete your most recently recorded match.", inline=False)
+    embed.add_field(name="/ping", value="Check if the bot is alive.", inline=False)
+    embed.add_field(name="/help", value="Show this help message.", inline=False)
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 # --- Start Bot ---
 bot.run(os.getenv("BOT_TOKEN"))
