@@ -100,6 +100,10 @@ async def record(
 @record.on_autocomplete("role")
 async def autocomplete_role(interaction: Interaction, input: str):
     return [r for r in ROLE_HEROES if input.lower() in r.lower()]
+    
+@record.on_autocomplete("hero")
+async def autocomplete_hero(interaction: Interaction, input: str):
+    return [h for h in ALL_HEROES if input.lower() in h.lower()][:25]
 
 @record.on_autocomplete("map")
 async def autocomplete_map(interaction: Interaction, input: str):
