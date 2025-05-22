@@ -180,7 +180,7 @@ async def result(interaction: Interaction):
             inline=False
         )
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.response.send_message(embed=embed)
 
 
 @bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
