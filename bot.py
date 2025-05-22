@@ -21,13 +21,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # --- PostgreSQL Connection ---
 def get_db_connection():
     db_url = os.getenv("DATABASE_URL")
-    print("DATABASE_URL =", db_url)  # ← This goes BEFORE raise
-
     if not db_url:
         raise ValueError("DATABASE_URL environment variable is not set.")
-
     return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
-
 
 # --- Initialize DB ---
 def init_db():
@@ -51,7 +47,6 @@ def init_db():
     except Exception as e:
         print("Failed to initialize database:", e)
         raise
-
 
 # --- Constants ---
 SEASON_1_START = datetime.datetime(2022, 10, 4)
@@ -88,8 +83,7 @@ class SettingsView(View):
 async def record(
     interaction: Interaction,
     role: str = SlashOption(name="role", description="Enter role (Tank, DPS, Support)", required=True),
-    gamemode: str = SlashOption(name="gamemode", description="Enter gamemode", required=True,
-        choices=list(GAMEMODE_MAPS.keys())),
+    gamemode: str = SlashOption(name="gamemode", description="Enter gamemode", required=True),
     hero: str = SlashOption(name="hero", description="Enter hero name", required=True),
     map: str = SlashOption(name="map", description="Enter map name", required=True),
     rank: str = SlashOption(name="rank", description="Enter rank tier", required=True),
@@ -125,6 +119,7 @@ async def autocomplete_hero(interaction: Interaction, input: str):
 
 @record.on_autocomplete("gamemode")
 async def autocomplete_gamemode(interaction: Interaction, input: str):
+    input = input or ""
     return [g for g in GAMEMODE_MAPS if input.lower() in g.lower()][:25]
 
 @record.on_autocomplete("map")
@@ -142,6 +137,7 @@ async def autocomplete_rank(interaction: Interaction, input: str):
 
 @record.on_autocomplete("modifier")
 async def autocomplete_modifier(interaction: Interaction, input: str):
+    input = str(input or "")
     return [str(i) for i in range(1, 6) if input in str(i)]
 
 @record.on_autocomplete("result")
@@ -152,7 +148,8 @@ async def autocomplete_result(interaction: Interaction, input: str):
 @bot.slash_command(name="result", description="Show your recorded matches for the current season")
 async def result(interaction: Interaction):
     user_id = interaction.user.id
-    season_start = SEASON_1_START + datetime.timedelta(weeks=SEASON_DURATION_WEEKS * ((datetime.datetime.utcnow() - SEASON_1_START).days // (SEASON_DURATION_WEEKS * 7)))
+    weeks_passed = (datetime.datetime.utcnow() - SEASON_1_START).days // (SEASON_DURATION_WEEKS * 7)
+    season_start = SEASON_1_START + datetime.timedelta(weeks=SEASON_DURATION_WEEKS * weeks_passed)
 
     with get_db_connection() as conn:
         with conn.cursor() as c:
