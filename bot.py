@@ -3,39 +3,51 @@ from nextcord.ext import commands
 from nextcord import Interaction, SlashOption
 from nextcord.ui import View, Button
 from nextcord import Embed, ButtonStyle
-from dotenv import load_dotenv
 import os
 import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from collections import Counter
 
-load_dotenv()
+# Load local .env only if not running in Railway
+if os.getenv("RAILWAY_ENVIRONMENT") is None:
+    from dotenv import load_dotenv
+    load_dotenv()
+
 intents = nextcord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # --- PostgreSQL Connection ---
 def get_db_connection():
-    return psycopg2.connect(os.getenv("DATABASE_URL"), cursor_factory=RealDictCursor)
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable is not set.")
+    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
 
 # --- Initialize DB ---
 def init_db():
-    with get_db_connection() as conn:
-        with conn.cursor() as c:
-            c.execute('''
-                CREATE TABLE IF NOT EXISTS matches (
-                    user_id BIGINT,
-                    hero TEXT,
-                    role TEXT,
-                    gamemode TEXT,
-                    map TEXT,
-                    rank TEXT,
-                    result TEXT,
-                    timestamp TEXT
-                );
-            ''')
-            conn.commit()
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as c:
+                c.execute('''
+                    CREATE TABLE IF NOT EXISTS matches (
+                        user_id BIGINT,
+                        hero TEXT,
+                        role TEXT,
+                        gamemode TEXT,
+                        map TEXT,
+                        rank TEXT,
+                        result TEXT,
+                        timestamp TEXT
+                    );
+                ''')
+                conn.commit()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print("Failed to initialize database:", e)
+        raise
+
 
 # --- Constants ---
 SEASON_1_START = datetime.datetime(2022, 10, 4)
