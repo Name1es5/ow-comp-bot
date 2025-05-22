@@ -43,10 +43,11 @@ ROLE_HEROES = {
 
 # --- Gamemodes & Maps ---
 GAMEMODE_MAPS = {
-    "Control": ["Lijiang Tower", "Ilios", "Nepal", "Oasis", "Antarctic Peninsula"],
-    "Escort": ["Havana", "Junkertown", "Circuit Royal", "Rialto", "Watchpoint: Gibraltar"],
-    "Push": ["New Queen Street", "Colosseo", "Esperança"],
-    "Hybrid": ["King's Row", "Eichenwalde", "Midtown", "Numbani", "Hollywood"]
+    "Control": ["Antarctic Peninsula", "Busan", "Ilios", "Lijiang Tower", "Nepal", "Oasis", "Samoa"],
+    "Escort": ["Circuit Royal", "Dorado", "Havana", "Junkertown", "Rialto", "Route 66", "Shambali Monastery", "Watchpoint: Gibraltar"],
+    "Push": ["New Queen Street", "Colosseo", "Esperança", "Runasapi"],
+    "Hybrid": ["Blizzard World", "Eichenwalde", "Hollywood", "King's Row", "Midtown", "Numbani", "Paraíso"],
+    "Flashpoint": ["New Junk City", "Suravasa"]
 }
 
 # --- UI Dropdowns ---
@@ -190,16 +191,24 @@ async def result(interaction: Interaction):
         rows = c.fetchall()
 
     if not rows:
-        await interaction.response.send_message("No matches recorded.", ephemeral=True)
+        await interaction.response.send_message("You have no recorded matches.", ephemeral=True)
         return
 
-    response = "**Your Matches:**\n"
-    response += "`Hero(s)      | Role   | Map                  | Rank     | Result`\n"
-    response += "`------------|--------|----------------------|----------|--------`\n"
-    for hero, role, map_, rank, result in rows:
-        response += f"`{hero:<12}| {role:<6}| {map_:<22}| {rank:<8}| {result}`\n"
+    embed = nextcord.Embed(
+        title="Your Matches",
+        description="Here are your most recent recorded matches:",
+        color=0x00ff99
+    )
 
-    await interaction.response.send_message(response)
+    for hero, role, map_, rank, result in rows:
+        embed.add_field(
+            name=f"{hero} ({role})",
+            value=f"**Map:** {map_}\n**Rank:** {rank}\n**Result:** {result}",
+            inline=False
+        )
+
+    await interaction.response.send_message(embed=embed)
+
 
 # --- Clear matches table ---
 @bot.slash_command(name="clear", description="Delete all your recorded matches")
