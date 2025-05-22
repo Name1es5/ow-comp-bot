@@ -223,28 +223,26 @@ async def result(interaction: Interaction):
         await interaction.response.send_message("No matches recorded.", ephemeral=True)
         return
 
-header_format = "{:<20} {:<8} {:<20} {:<11} {:<7} {}"
-table = "```\n"
-table += header_format.format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted") + "\n"
+    header_format = "{:<20} {:<8} {:<20} {:<11} {:<7} {}"
+    table = "```\n"
+    table += header_format.format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted") + "\n"
 
-# Compute exact length of that formatted header
-separator = "-" * len(header_format.format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted"))
-table += separator + "\n"
+    separator = "-" * len(header_format.format("Hero(s)", "Role", "Map", "Rank", "Result", "Submitted"))
+    table += separator + "\n"
 
-# Then continue adding data rows the same way
-for hero, role, map_, rank, result, ts in rows:
-    try:
-        dt = datetime.datetime.fromisoformat(ts)
-        time_fmt = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
-    except:
-        time_fmt = "N/A"
+    for hero, role, map_, rank, result, ts in rows:
+        try:
+            dt = datetime.datetime.fromisoformat(ts)
+            time_fmt = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
+        except:
+            time_fmt = "N/A"
+        table += header_format.format(hero, role, map_, rank, result, time_fmt) + "\n"
 
-    table += header_format.format(hero, role, map_, rank, result, time_fmt) + "\n"
+    table += "```"
 
-table += "```"
-
-
+    # This line was incorrectly indented in your version
     await interaction.response.send_message(table)
+
 
 
 
