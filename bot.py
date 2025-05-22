@@ -127,13 +127,40 @@ class ModifierSelect(Select):
         await interaction.response.send_message("✅ Match recorded!", ephemeral=True)
 
 # --- Views ---
-class RoleView(View):     def __init__(self): super().__init__(); self.add_item(RoleSelect())
-class HeroView(View):     def __init__(self, r): super().__init__(); self.add_item(HeroSelect(r))
-class GamemodeView(View): def __init__(self, r, h): super().__init__(); self.add_item(GamemodeSelect(r, h))
-class MapView(View):      def __init__(self, r, h, m): super().__init__(); self.add_item(MapSelect(r, h, m))
-class ResultView(View):   def __init__(self, r, h, m): super().__init__(); self.add_item(ResultSelect(r, h, m))
-class RankView(View):     def __init__(self, r, h, m, res): super().__init__(); self.add_item(RankSelect(r, h, m, res))
-class ModifierView(View): def __init__(self, r, h, m, res, rank): super().__init__(); self.add_item(ModifierSelect(r, h, m, res, rank))
+class RoleView(View):
+    def __init__(self):
+        super().__init__()
+        self.add_item(RoleSelect())
+
+class HeroView(View):
+    def __init__(self, r):
+        super().__init__()
+        self.add_item(HeroSelect(r))
+
+class GamemodeView(View):
+    def __init__(self, r, h):
+        super().__init__()
+        self.add_item(GamemodeSelect(r, h))
+
+class MapView(View):
+    def __init__(self, r, h, m):
+        super().__init__()
+        self.add_item(MapSelect(r, h, m))
+
+class ResultView(View):
+    def __init__(self, r, h, m):
+        super().__init__()
+        self.add_item(ResultSelect(r, h, m))
+
+class RankView(View):
+    def __init__(self, r, h, m, res):
+        super().__init__()
+        self.add_item(RankSelect(r, h, m, res))
+
+class ModifierView(View):
+    def __init__(self, r, h, m, res, rank):
+        super().__init__()
+        self.add_item(ModifierSelect(r, h, m, res, rank))
 
 # --- Slash Commands ---
 
