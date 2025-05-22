@@ -173,10 +173,13 @@ async def result(interaction: Interaction):
             formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         except:
             formatted = "Unknown"
-        embed.add_field(
-            name=f"{match_num}. {map_} [{result_val}]",
-            value=f"**Role:** {role}, **Rank:** {rank}, **Time:** {formatted}\n**Heroes:** {hero}",
-            inline=False
+emoji = "✅" if result_val.lower() == "win" else "❌"
+embed.add_field(
+    name=f"{emoji} {match_num}. {map_} [{result_val}]",
+    value=f"**Role:** {role}, **Rank:** {rank}, **Time:** {formatted}\n**Heroes:** {hero}",
+    inline=False
+)
+
         )
 
     await interaction.response.send_message(embed=embed)
