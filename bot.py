@@ -207,16 +207,16 @@ async def result(interaction: Interaction):
             formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         except:
             formatted = "Unknown"
-emoji = "✅" if result_val.lower() == "win" else "❌"
-embed.add_field(
-    name=f"{emoji} {match_num}. {map_} [{result_val}]",
-    value=f"**Role:** {role}, **Rank:** {rank}, **Time:** {formatted}\n**Heroes:** {hero}",
-    inline=False
-)
-
+        
+        emoji = "✅" if result_val.lower() == "win" else "❌"
+        embed.add_field(
+            name=f"{emoji} {match_num}. {map_} [{result_val}]",
+            value=f"**Role:** {role}, **Rank:** {rank}, **Time:** {formatted}\n**Heroes:** {hero}",
+            inline=False
         )
 
     await interaction.response.send_message(embed=embed)
+
 
 @bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
 async def top_heroes(interaction: Interaction):
