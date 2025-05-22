@@ -53,7 +53,7 @@ SEASON_1_START = datetime.datetime(2022, 10, 4)
 SEASON_DURATION_WEEKS = 9
 
 ROLE_HEROES = {
-    "Tank": ["Doomfist", "D.Va", "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Zarya"],
+    "Tank": ["Doomfist", "D.Va", "Hazard", "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Zarya"],
     "DPS": ["Ashe", "Bastion", "Cassidy", "Echo", "Freja", "Genji", "Hanzo", "Junkrat", "Mei", "Pharah", "Reaper",
             "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbjörn", "Tracer", "Venture", "Widowmaker"],
     "Support": ["Ana", "Baptiste", "Brigitte", "Illari", "Kiriko", "Lifeweaver", "Lucio", "Mercy", "Moira", "Zenyatta"]
@@ -173,11 +173,13 @@ async def result(interaction: Interaction):
     for i, row in enumerate(rows):
         dt = datetime.datetime.fromisoformat(row['timestamp'])
         formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
+        emoji = "✅" if row['result'].lower() == "win" else "❌"
         embed.add_field(
-            name=f"{i + 1}. {row['map']} [{row['result']}]",
+            name=f"{emoji} {i + 1}. {row['map']} [{row['result']}]",
             value=f"**Role:** {row['role']}, **Rank:** {row['rank']}, **Time:** {formatted}\n**Heroes:** {row['hero']}",
-            inline=False
-        )
+        i   nline=False
+    )
+
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
