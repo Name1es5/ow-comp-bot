@@ -224,17 +224,14 @@ async def record(interaction: Interaction):
     await interaction.response.send_message("Choose your role:", view=RoleView(), ephemeral=True)
 
 
-# --- Result table ---
 @bot.slash_command(name="result", description="Show your recorded matches")
 async def result(interaction: Interaction):
     user_id = interaction.user.id
     current_season = get_current_season()
-    # Calculate the start date of the current season
     season_start = SEASON_1_START + datetime.timedelta(weeks=SEASON_DURATION_WEEKS * (current_season - 1))
 
     with sqlite3.connect("matches.db") as conn:
         c = conn.cursor()
-        # Fetch matches for the current season
         c.execute(
             "SELECT hero, role, map, rank, result, timestamp FROM matches WHERE user_id = ? AND timestamp >= ? ORDER BY rowid DESC",
             (user_id, season_start.isoformat())
@@ -245,9 +242,21 @@ async def result(interaction: Interaction):
         await interaction.response.send_message("No matches recorded for the current season.", ephemeral=True)
         return
 
+    # Check for losing streak at the start of the list
+    losing_streak = 0
+    for _, _, _, _, result, _ in rows:
+        if result.lower() == "loss":
+            losing_streak += 1
+        else:
+            break
+
+    tip_message = ""
+    if losing_streak >= 3:
+        tip_message = "💡 **Tip:** You've lost 3 games in a row — maybe take a break or drink some water!\n\n"
+
     embed = nextcord.Embed(
         title="📊 Your Matches",
-        description=f"**Season {current_season}** — {len(rows)} match{'es' if len(rows) != 1 else ''} recorded\nMost recent shown first.",
+        description=tip_message + f"**Season {current_season}** — {len(rows)} match{'es' if len(rows) != 1 else ''} recorded\nMost recent shown first.",
         color=0x00ff99
     )
 
@@ -265,6 +274,7 @@ async def result(interaction: Interaction):
         )
 
     await interaction.response.send_message(embed=embed)
+
 
 
 # --- Top Heroes played ---
