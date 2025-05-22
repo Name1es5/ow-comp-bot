@@ -202,7 +202,7 @@ async def top_heroes(interaction: Interaction):
         percent = (count / total) * 100
         embed.add_field(name=hero, value=f"{count} games ({percent:.1f}%)", inline=False)
 
-    await interaction.response.send_message(embed=embed
+    await interaction.response.send_message(embed=embed)
 
 @bot.slash_command(name="clear", description="Delete all your recorded matches")
 async def clear(interaction: Interaction):
