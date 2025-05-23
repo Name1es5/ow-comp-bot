@@ -2,7 +2,6 @@ import nextcord
 from nextcord.ext import commands
 from nextcord import Interaction, SlashOption
 from nextcord.ui import View, Button
-from nextcord.ui import Select, View
 from nextcord import Embed, ButtonStyle
 import os
 import datetime
@@ -104,48 +103,6 @@ async def record(
 
     await interaction.response.send_message("Match recorded!", ephemeral=True)
 
-# --- Autocompletes ---
-@record.on_autocomplete("role")
-async def autocomplete_role(interaction: Interaction, input: str):
-    return [r for r in ROLE_HEROES if input.lower() in r.lower()]
-
-@record.on_autocomplete("hero")
-async def autocomplete_hero(interaction: Interaction, input: str):
-    role = None
-    for option in interaction.data.get("options", []):
-        if option["name"] == "role":
-            role = option.get("value")
-    hero_pool = ROLE_HEROES.get(role, ALL_HEROES)
-    return [h for h in hero_pool if input.lower() in h.lower()][:25]
-
-@record.on_autocomplete("gamemode")
-async def autocomplete_gamemode(interaction: Interaction, input: str):
-    input = input or ""
-    return [g for g in GAMEMODE_MAPS if input.lower() in g.lower()][:25]
-
-@record.on_autocomplete("map")
-async def autocomplete_map(interaction: Interaction, input: str):
-    gamemode = None
-    for option in interaction.data.get("options", []):
-        if option["name"] == "gamemode":
-            gamemode = option.get("value")
-    map_pool = GAMEMODE_MAPS.get(gamemode, ALL_MAPS)
-    return [m for m in map_pool if input.lower() in m.lower()][:25]
-
-@record.on_autocomplete("rank")
-async def autocomplete_rank(interaction: Interaction, input: str):
-    return [r for r in RANK_TIERS if input.lower() in r.lower()]
-
-@record.on_autocomplete("modifier")
-async def autocomplete_modifier(interaction: Interaction, input: str):
-    input = str(input or "")
-    return [str(i) for i in range(1, 6) if input in str(i)]
-
-@record.on_autocomplete("result")
-async def autocomplete_result(interaction: Interaction, input: str):
-    return [r for r in VALID_RESULTS if input.lower() in r.lower()]
-
-# --- Other Commands ---
 @bot.slash_command(name="result", description="Show your recorded matches for the current season")
 async def result(interaction: Interaction):
     user_id = interaction.user.id
@@ -157,9 +114,9 @@ async def result(interaction: Interaction):
             c.execute('''
                 SELECT hero, role, map, rank, result, timestamp FROM matches
                 WHERE user_id = %s AND timestamp >= %s
-                ORDER BY timestamp DESC
+                ORDER BY timestamp ASC
             ''', (user_id, season_start.isoformat()))
-            rows = list(reversed(c.fetchall()))  # now oldest is last in display
+            rows = c.fetchall()
 
     if not rows:
         await interaction.response.send_message("No matches recorded this season.")
@@ -167,7 +124,7 @@ async def result(interaction: Interaction):
 
     embed = Embed(
         title="Your Matches",
-        description=f"**Season** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nOldest match shown last.",
+        description=f"**Season** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nOldest match shown first.",
         color=0x00ff99
     )
 
@@ -175,7 +132,7 @@ async def result(interaction: Interaction):
         dt = datetime.datetime.fromisoformat(row['timestamp'])
         formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         emoji = "✅" if row['result'].lower() == "win" else "❌"
-        match_number = i + 1  # starts from 1 at the bottom
+        match_number = i + 1
         embed.add_field(
             name=f"{emoji} {match_number}. {row['map']} [{row['result']}]",
             value=f"**Role:** {row['role']}, **Rank:** {row['rank']}, **Time:** {formatted}\n**Heroes:** {row['hero']}",
@@ -183,52 +140,6 @@ async def result(interaction: Interaction):
         )
 
     await interaction.response.send_message(embed=embed)
-
-
-
-@bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
-async def top_heroes(interaction: Interaction):
-    user_id = interaction.user.id
-    with get_db_connection() as conn:
-        with conn.cursor() as c:
-            c.execute("SELECT hero FROM matches WHERE user_id = %s", (user_id,))
-            all_heroes = [row['hero'] for row in c.fetchall()]
-
-    if not all_heroes:
-        await interaction.response.send_message("No matches recorded.")
-        return
-
-    counter = Counter(all_heroes).most_common(3)
-    total = sum(dict(counter).values())
-    embed = Embed(title="Top 3 Most Played Heroes", color=0x00ff99)
-    for hero, count in counter:
-        percent = (count / total) * 100
-        embed.add_field(name=hero, value=f"{count} games ({percent:.1f}%)", inline=False)
-
-    await interaction.response.send_message(embed=embed)
-
-@bot.slash_command(name="clear", description="Delete all your recorded matches")
-async def clear(interaction: Interaction):
-    user_id = interaction.user.id
-    with get_db_connection() as conn:
-        with conn.cursor() as c:
-            c.execute("DELETE FROM matches WHERE user_id = %s", (user_id,))
-            conn.commit()
-    await interaction.response.send_message("Your match history has been cleared.", ephemeral=True)
-
-@bot.slash_command(name="delete_last", description="Delete your most recent match")
-async def delete_last(interaction: Interaction):
-    user_id = interaction.user.id
-    with get_db_connection() as conn:
-        with conn.cursor() as c:
-            c.execute("SELECT timestamp FROM matches WHERE user_id = %s ORDER BY timestamp DESC LIMIT 1", (user_id,))
-            row = c.fetchone()
-            if row:
-                c.execute("DELETE FROM matches WHERE user_id = %s AND timestamp = %s", (user_id, row['timestamp']))
-                conn.commit()
-                await interaction.response.send_message("Last match deleted.", ephemeral=True)
-            else:
-                await interaction.response.send_message("No matches to delete.", ephemeral=True)
 
 @bot.event
 async def on_ready():
