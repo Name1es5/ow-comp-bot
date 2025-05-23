@@ -159,7 +159,7 @@ async def result(interaction: Interaction):
                 WHERE user_id = %s AND timestamp >= %s
                 ORDER BY timestamp DESC
             ''', (user_id, season_start.isoformat()))
-            rows = c.fetchall()
+            rows = list(reversed(c.fetchall()))  # now oldest is last in display
 
     if not rows:
         await interaction.response.send_message("No matches recorded this season.")
@@ -167,15 +167,15 @@ async def result(interaction: Interaction):
 
     embed = Embed(
         title="Your Matches",
-        description=f"**Season** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nOldest match shown first.",
+        description=f"**Season** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nOldest match shown last.",
         color=0x00ff99
     )
 
-    for i, row in enumerate(reversed(rows)):
+    for i, row in enumerate(rows):
         dt = datetime.datetime.fromisoformat(row['timestamp'])
         formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
         emoji = "✅" if row['result'].lower() == "win" else "❌"
-        match_number = i + 1
+        match_number = i + 1  # starts from 1 at the bottom
         embed.add_field(
             name=f"{emoji} {match_number}. {row['map']} [{row['result']}]",
             value=f"**Role:** {row['role']}, **Rank:** {row['rank']}, **Time:** {formatted}\n**Heroes:** {row['hero']}",
@@ -183,6 +183,7 @@ async def result(interaction: Interaction):
         )
 
     await interaction.response.send_message(embed=embed)
+
 
 
 @bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
