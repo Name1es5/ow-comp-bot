@@ -80,38 +80,6 @@ class SettingsView(View):
         self.add_item(Button(label="GitHub", url="https://github.com/your-repo", style=ButtonStyle.link))
         
         
-
-# --- Autocomplete Handlers ---
-
-@record.autocomplete("role")
-async def autocomplete_role(interaction: Interaction, current: str):
-    roles = [r for r in ROLE_HEROES.keys() if current.lower() in r.lower()]
-    return roles[:25]
-
-@record.autocomplete("gamemode")
-async def autocomplete_gamemode(interaction: Interaction, current: str):
-    gamemodes = [g for g in GAMEMODE_MAPS.keys() if current.lower() in g.lower()]
-    return gamemodes[:25]
-
-@record.autocomplete("hero")
-async def autocomplete_hero(interaction: Interaction, current: str):
-    heroes = [h for h in ALL_HEROES if current.lower() in h.lower()]
-    return heroes[:25]
-
-@record.autocomplete("map")
-async def autocomplete_map(interaction: Interaction, current: str):
-    maps = [m for m in ALL_MAPS if current.lower() in m.lower()]
-    return maps[:25]
-
-@record.autocomplete("rank")
-async def autocomplete_rank(interaction: Interaction, current: str):
-    ranks = [r for r in RANK_TIERS if current.lower() in r.lower()]
-    return ranks[:25]
-
-@record.autocomplete("result")
-async def autocomplete_result(interaction: Interaction, current: str):
-    results = [r for r in VALID_RESULTS if current.lower() in r.lower()]
-    return results[:25]
     
 # --- Slash Commands ---    
 
@@ -177,6 +145,68 @@ async def result(interaction: Interaction):
         )
 
     await interaction.response.send_message(embed=embed)
+    
+@bot.slash_command(name="help", description="Show available commands and usage")
+async def help_command(interaction: Interaction):
+    embed = Embed(
+        title="Bot Commands",
+        description="See available slash commands:",
+        color=0x3498db
+    )
+
+    embed.add_field(
+        name="/record",
+        value="Record a match with details like hero, role, map, etc.",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/result",
+        value="Show your recorded matches for the current season.",
+        inline=False
+    )
+
+    embed.add_field(
+        name="/help",
+        value="Display this help message.",
+        inline=False
+    )
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+    
+    
+# --- Autocomplete Handlers ---
+
+@record.autocomplete("role")
+async def autocomplete_role(interaction: Interaction, current: str):
+    roles = [r for r in ROLE_HEROES.keys() if current.lower() in r.lower()]
+    return roles[:25]
+
+@record.autocomplete("gamemode")
+async def autocomplete_gamemode(interaction: Interaction, current: str):
+    gamemodes = [g for g in GAMEMODE_MAPS.keys() if current.lower() in g.lower()]
+    return gamemodes[:25]
+
+@record.autocomplete("hero")
+async def autocomplete_hero(interaction: Interaction, current: str):
+    heroes = [h for h in ALL_HEROES if current.lower() in h.lower()]
+    return heroes[:25]
+
+@record.autocomplete("map")
+async def autocomplete_map(interaction: Interaction, current: str):
+    maps = [m for m in ALL_MAPS if current.lower() in m.lower()]
+    return maps[:25]
+
+@record.autocomplete("rank")
+async def autocomplete_rank(interaction: Interaction, current: str):
+    ranks = [r for r in RANK_TIERS if current.lower() in r.lower()]
+    return ranks[:25]
+
+@record.autocomplete("result")
+async def autocomplete_result(interaction: Interaction, current: str):
+    results = [r for r in VALID_RESULTS if current.lower() in r.lower()]
+    return results[:25]
+
 
 @bot.event
 async def on_ready():
