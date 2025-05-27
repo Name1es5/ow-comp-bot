@@ -212,36 +212,35 @@ async def help_command(interaction: Interaction):
     
     
 # --- Autocomplete Handlers ---
-
-@bot.slash_command.auto_complete("role")
+@record.autocomplete_role
 async def autocomplete_role(interaction: Interaction, value: str):
-    options = [r for r in ROLE_HEROES.keys() if value.lower() in r.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    roles = [r for r in ROLE_HEROES if value.lower() in r.lower()]
+    await interaction.response.send_autocomplete(roles[:25])
 
-@bot.slash_command.auto_complete("gamemode")
+@record.autocomplete_gamemode
 async def autocomplete_gamemode(interaction: Interaction, value: str):
-    options = [g for g in GAMEMODE_MAPS.keys() if value.lower() in g.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    gamemodes = [g for g in GAMEMODE_MAPS if value.lower() in g.lower()]
+    await interaction.response.send_autocomplete(gamemodes[:25])
 
-@bot.slash_command.auto_complete("hero")
+@record.autocomplete_hero
 async def autocomplete_hero(interaction: Interaction, value: str):
-    options = [h for h in ALL_HEROES if value.lower() in h.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    heroes = [h for h in ALL_HEROES if value.lower() in h.lower()]
+    await interaction.response.send_autocomplete(heroes[:25])
 
-@bot.slash_command.auto_complete("map")
+@record.autocomplete_map
 async def autocomplete_map(interaction: Interaction, value: str):
-    options = [m for m in ALL_MAPS if value.lower() in m.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    maps = [m for m in ALL_MAPS if value.lower() in m.lower()]
+    await interaction.response.send_autocomplete(maps[:25])
 
-@bot.slash_command.auto_complete("rank")
+@record.autocomplete_rank
 async def autocomplete_rank(interaction: Interaction, value: str):
-    options = [r for r in RANK_TIERS if value.lower() in r.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    ranks = [r for r in RANK_TIERS if value.lower() in r.lower()]
+    await interaction.response.send_autocomplete(ranks[:25])
 
-@bot.slash_command.auto_complete("result")
+@record.autocomplete_result
 async def autocomplete_result(interaction: Interaction, value: str):
-    options = [r for r in VALID_RESULTS if value.lower() in r.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    results = [r for r in VALID_RESULTS if value.lower() in r.lower()]
+    await interaction.response.send_autocomplete(results[:25])
 
 
 
