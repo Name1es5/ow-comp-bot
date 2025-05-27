@@ -83,16 +83,51 @@ class SettingsView(View):
     
 # --- Slash Commands ---    
 
+# --- Slash Command: Record a Match ---
 @bot.slash_command(name="record", description="Record a match")
 async def record(
     interaction: Interaction,
-    role: str = SlashOption(name="role", description="Enter role (Tank, DPS, Support)", required=True, autocomplete=True),
-    gamemode: str = SlashOption(name="gamemode", description="Enter gamemode", required=True, autocomplete=True),
-    hero: str = SlashOption(name="hero", description="Enter hero name", required=True, autocomplete=True),
-    map: str = SlashOption(name="map", description="Enter map name", required=True, autocomplete=True),
-    rank: str = SlashOption(name="rank", description="Enter rank tier", required=True, autocomplete=True),
-    modifier: int = SlashOption(name="modifier", description="Rank modifier (1-5)", required=True),
-    result: str = SlashOption(name="result", description="Match result (Win/Loss)", required=True, autocomplete=True)
+    role: str = SlashOption(
+        name="role",
+        description="Enter role (Tank, DPS, Support)",
+        required=True,
+        autocomplete=True
+    ),
+    gamemode: str = SlashOption(
+        name="gamemode",
+        description="Enter gamemode",
+        required=True,
+        autocomplete=True
+    ),
+    hero: str = SlashOption(
+        name="hero",
+        description="Enter hero name",
+        required=True,
+        autocomplete=True
+    ),
+    map: str = SlashOption(
+        name="map",
+        description="Enter map name",
+        required=True,
+        autocomplete=True
+    ),
+    rank: str = SlashOption(
+        name="rank",
+        description="Enter rank tier",
+        required=True,
+        autocomplete=True
+    ),
+    modifier: int = SlashOption(
+        name="modifier",
+        description="Rank modifier (1-5)",
+        required=True
+    ),
+    result: str = SlashOption(
+        name="result",
+        description="Match result (Win/Loss)",
+        required=True,
+        autocomplete=True
+    )
 ):
     rank_full = f"{rank} {modifier}"
     timestamp = datetime.datetime.utcnow().isoformat()
@@ -106,6 +141,7 @@ async def record(
             conn.commit()
 
     await interaction.response.send_message("Match recorded!", ephemeral=True)
+
     
 
 @bot.slash_command(name="result", description="Show your recorded matches for the current season")
@@ -177,35 +213,36 @@ async def help_command(interaction: Interaction):
     
 # --- Autocomplete Handlers ---
 
-@record.autocomplete("role")
-async def autocomplete_role(interaction: Interaction, current: str):
-    roles = [r for r in ROLE_HEROES.keys() if current.lower() in r.lower()]
-    return roles[:25]
+@bot.slash_command.auto_complete("role")
+async def autocomplete_role(interaction: Interaction, value: str):
+    options = [r for r in ROLE_HEROES.keys() if value.lower() in r.lower()]
+    await interaction.response.send_autocomplete(options[:25])
 
-@record.autocomplete("gamemode")
-async def autocomplete_gamemode(interaction: Interaction, current: str):
-    gamemodes = [g for g in GAMEMODE_MAPS.keys() if current.lower() in g.lower()]
-    return gamemodes[:25]
+@bot.slash_command.auto_complete("gamemode")
+async def autocomplete_gamemode(interaction: Interaction, value: str):
+    options = [g for g in GAMEMODE_MAPS.keys() if value.lower() in g.lower()]
+    await interaction.response.send_autocomplete(options[:25])
 
-@record.autocomplete("hero")
-async def autocomplete_hero(interaction: Interaction, current: str):
-    heroes = [h for h in ALL_HEROES if current.lower() in h.lower()]
-    return heroes[:25]
+@bot.slash_command.auto_complete("hero")
+async def autocomplete_hero(interaction: Interaction, value: str):
+    options = [h for h in ALL_HEROES if value.lower() in h.lower()]
+    await interaction.response.send_autocomplete(options[:25])
 
-@record.autocomplete("map")
-async def autocomplete_map(interaction: Interaction, current: str):
-    maps = [m for m in ALL_MAPS if current.lower() in m.lower()]
-    return maps[:25]
+@bot.slash_command.auto_complete("map")
+async def autocomplete_map(interaction: Interaction, value: str):
+    options = [m for m in ALL_MAPS if value.lower() in m.lower()]
+    await interaction.response.send_autocomplete(options[:25])
 
-@record.autocomplete("rank")
-async def autocomplete_rank(interaction: Interaction, current: str):
-    ranks = [r for r in RANK_TIERS if current.lower() in r.lower()]
-    return ranks[:25]
+@bot.slash_command.auto_complete("rank")
+async def autocomplete_rank(interaction: Interaction, value: str):
+    options = [r for r in RANK_TIERS if value.lower() in r.lower()]
+    await interaction.response.send_autocomplete(options[:25])
 
-@record.autocomplete("result")
-async def autocomplete_result(interaction: Interaction, current: str):
-    results = [r for r in VALID_RESULTS if current.lower() in r.lower()]
-    return results[:25]
+@bot.slash_command.auto_complete("result")
+async def autocomplete_result(interaction: Interaction, value: str):
+    options = [r for r in VALID_RESULTS if value.lower() in r.lower()]
+    await interaction.response.send_autocomplete(options[:25])
+
 
 
 @bot.event
