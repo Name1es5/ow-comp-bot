@@ -87,48 +87,17 @@ class SettingsView(View):
 @bot.slash_command(name="record", description="Record a match")
 async def record(
     interaction: Interaction,
-    role: str = SlashOption(
-        name="role",
-        description="Enter role (Tank, DPS, Support)",
-        required=True,
-        autocomplete=True
-    ),
-    gamemode: str = SlashOption(
-        name="gamemode",
-        description="Enter gamemode",
-        required=True,
-        autocomplete=True
-    ),
-    hero: str = SlashOption(
-        name="hero",
-        description="Enter hero name",
-        required=True,
-        autocomplete=True
-    ),
-    map: str = SlashOption(
-        name="map",
-        description="Enter map name",
-        required=True,
-        autocomplete=True
-    ),
-    rank: str = SlashOption(
-        name="rank",
-        description="Enter rank tier",
-        required=True,
-        autocomplete=True
-    ),
-    modifier: int = SlashOption(
-        name="modifier",
-        description="Rank modifier (1-5)",
-        required=True
-    ),
-    result: str = SlashOption(
-        name="result",
-        description="Match result (Win/Loss)",
-        required=True,
-        autocomplete=True
-    )
+    role: str = SlashOption(name="role", description="Enter role", required=True, autocomplete=True),
+    gamemode: str = SlashOption(name="gamemode", description="Enter gamemode", required=True, autocomplete=True),
+    hero: str = SlashOption(name="hero", description="Enter hero", required=True, autocomplete=True),
+    map: str = SlashOption(name="map", description="Enter map", required=True, autocomplete=True),
+    rank: str = SlashOption(name="rank", description="Enter rank", required=True, autocomplete=True),
+    modifier: int = SlashOption(name="modifier", description="Rank modifier (1-5)", required=True),
+    result: str = SlashOption(name="result", description="Win or Loss", required=True, autocomplete=True)
 ):
+    # Your DB code here
+    await interaction.response.send_message("Match recorded!", ephemeral=True)
+
     rank_full = f"{rank} {modifier}"
     timestamp = datetime.datetime.utcnow().isoformat()
 
@@ -212,38 +181,29 @@ async def help_command(interaction: Interaction):
     
     
 # --- Autocomplete Handlers ---
-@record.autocomplete("role")
+@bot.slash_command.autocomplete(name="record", option="role")
 async def autocomplete_role(interaction: Interaction, value: str):
-    options = [r for r in ROLE_HEROES if value.lower() in r.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    await interaction.response.send_autocomplete([r for r in ROLE_HEROES if value.lower() in r.lower()][:25])
 
-@record.autocomplete("gamemode")
+@bot.slash_command.autocomplete(name="record", option="gamemode")
 async def autocomplete_gamemode(interaction: Interaction, value: str):
-    options = [g for g in GAMEMODE_MAPS if value.lower() in g.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    await interaction.response.send_autocomplete([g for g in GAMEMODE_MAPS if value.lower() in g.lower()][:25])
 
-@record.autocomplete("hero")
+@bot.slash_command.autocomplete(name="record", option="hero")
 async def autocomplete_hero(interaction: Interaction, value: str):
-    options = [h for h in ALL_HEROES if value.lower() in h.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    await interaction.response.send_autocomplete([h for h in ALL_HEROES if value.lower() in h.lower()][:25])
 
-@record.autocomplete("map")
+@bot.slash_command.autocomplete(name="record", option="map")
 async def autocomplete_map(interaction: Interaction, value: str):
-    options = [m for m in ALL_MAPS if value.lower() in m.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    await interaction.response.send_autocomplete([m for m in ALL_MAPS if value.lower() in m.lower()][:25])
 
-@record.autocomplete("rank")
+@bot.slash_command.autocomplete(name="record", option="rank")
 async def autocomplete_rank(interaction: Interaction, value: str):
-    options = [r for r in RANK_TIERS if value.lower() in r.lower()]
-    await interaction.response.send_autocomplete(options[:25])
+    await interaction.response.send_autocomplete([r for r in RANK_TIERS if value.lower() in r.lower()][:25])
 
-@record.autocomplete("result")
+@bot.slash_command.autocomplete(name="record", option="result")
 async def autocomplete_result(interaction: Interaction, value: str):
-    options = [r for r in VALID_RESULTS if value.lower() in r.lower()]
-    await interaction.response.send_autocomplete(options[:25])
-
-
-
+    await interaction.response.send_autocomplete([r for r in VALID_RESULTS if value.lower() in r.lower()][:25])
 
 @bot.event
 async def on_ready():
