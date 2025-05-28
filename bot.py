@@ -223,13 +223,18 @@ async def top_heroes(interaction: Interaction):
     hero_counts = Counter(row['hero'] for row in rows)
     top_three = hero_counts.most_common(3)
 
-    embed = Embed(
+    embed = nextcord.Embed(
         title="Top 3 Heroes Played",
         color=0xf1c40f
     )
 
     for i, (hero, count) in enumerate(top_three, start=1):
         embed.add_field(name=f"#{i} — {hero}", value=f"Played {count} time{'s' if count != 1 else ''}", inline=False)
+
+    top_hero = top_three[0][0]
+    filename = top_hero.replace(':', '').replace(' ', '').replace('.', '') + ".png"
+    image_url = f"https://name1es5.github.io/overwatch2-hero-portraits/{filename}"
+    embed.set_thumbnail(url=image_url)
 
     await interaction.response.send_message(embed=embed)
 
