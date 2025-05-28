@@ -14,6 +14,7 @@ if os.getenv("RAILWAY_ENVIRONMENT") is None:
     from dotenv import load_dotenv
     load_dotenv()
 
+# Intents configuration
 intents = nextcord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -55,15 +56,15 @@ SEASON_DURATION_WEEKS = 9
 ROLE_HEROES = {
     "Tank": ["Doomfist", "D.Va", "Hazard", "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Zarya"],
     "DPS": ["Ashe", "Bastion", "Cassidy", "Echo", "Freja", "Genji", "Hanzo", "Junkrat", "Mei", "Pharah", "Reaper",
-            "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbjörn", "Tracer", "Venture", "Widowmaker"],
+            "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbj\u00f6rn", "Tracer", "Venture", "Widowmaker"],
     "Support": ["Ana", "Baptiste", "Brigitte", "Illari", "Kiriko", "Lifeweaver", "Lucio", "Mercy", "Moira", "Zenyatta"]
 }
 
 GAMEMODE_MAPS = {
     "Control": ["Antarctic Peninsula", "Busan", "Ilios", "Lijiang Tower", "Nepal", "Oasis", "Samoa"],
     "Escort": ["Circuit Royal", "Dorado", "Havana", "Junkertown", "Rialto", "Route 66", "Shambali Monastery", "Watchpoint: Gibraltar"],
-    "Push": ["Colosseo", "Esperança", "New Queen Street", "Runasapi"],
-    "Hybrid": ["Blizzard World", "Eichenwalde", "Hollywood", "King's Row", "Midtown", "Numbani", "Paraíso"],
+    "Push": ["Colosseo", "Esperan\u00e7a", "New Queen Street", "Runasapi"],
+    "Hybrid": ["Blizzard World", "Eichenwalde", "Hollywood", "King's Row", "Midtown", "Numbani", "Para\u00edso"],
     "Flashpoint": ["New Junk City", "Suravasa"]
 }
 
@@ -72,32 +73,55 @@ ALL_MAPS = [m for maps in GAMEMODE_MAPS.values() for m in maps]
 RANK_TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Champion"]
 VALID_RESULTS = ["Win", "Loss"]
 
+# --- UI View for Settings ---
 class SettingsView(View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(Button(label="Change Timezone", custom_id="change_timezone", style=ButtonStyle.primary))
         self.add_item(Button(label="Export Data", custom_id="export_data", style=ButtonStyle.success))
         self.add_item(Button(label="GitHub", url="https://github.com/your-repo", style=ButtonStyle.link))
-        
-        
-    
-# --- Slash Commands ---    
 
-# --- Slash Command: Record a Match ---
-@bot.slash_command(name="record", description="Record a match")
+# --- Refactored Slash Command: Record a Match ---
+record_cmd = bot.slash_command(
+    name="record",
+    description="Record a match"
+)
+
+@record_cmd.on_autocomplete("role")
+async def autocomplete_role(interaction: Interaction, value: str):
+    await interaction.response.send_autocomplete([r for r in ROLE_HEROES if value.lower() in r.lower()][:25])
+
+@record_cmd.on_autocomplete("gamemode")
+async def autocomplete_gamemode(interaction: Interaction, value: str):
+    await interaction.response.send_autocomplete([g for g in GAMEMODE_MAPS if value.lower() in g.lower()][:25])
+
+@record_cmd.on_autocomplete("hero")
+async def autocomplete_hero(interaction: Interaction, value: str):
+    await interaction.response.send_autocomplete([h for h in ALL_HEROES if value.lower() in h.lower()][:25])
+
+@record_cmd.on_autocomplete("map")
+async def autocomplete_map(interaction: Interaction, value: str):
+    await interaction.response.send_autocomplete([m for m in ALL_MAPS if value.lower() in m.lower()][:25])
+
+@record_cmd.on_autocomplete("rank")
+async def autocomplete_rank(interaction: Interaction, value: str):
+    await interaction.response.send_autocomplete([r for r in RANK_TIERS if value.lower() in r.lower()][:25])
+
+@record_cmd.on_autocomplete("result")
+async def autocomplete_result(interaction: Interaction, value: str):
+    await interaction.response.send_autocomplete([r for r in VALID_RESULTS if value.lower() in r.lower()][:25])
+
+@record_cmd()
 async def record(
     interaction: Interaction,
-    role: str = SlashOption(name="role", description="Enter role", required=True, autocomplete=True),
-    gamemode: str = SlashOption(name="gamemode", description="Enter gamemode", required=True, autocomplete=True),
-    hero: str = SlashOption(name="hero", description="Enter hero", required=True, autocomplete=True),
-    map: str = SlashOption(name="map", description="Enter map", required=True, autocomplete=True),
-    rank: str = SlashOption(name="rank", description="Enter rank", required=True, autocomplete=True),
-    modifier: int = SlashOption(name="modifier", description="Rank modifier (1-5)", required=True),
-    result: str = SlashOption(name="result", description="Win or Loss", required=True, autocomplete=True)
+    role: str,
+    gamemode: str,
+    hero: str,
+    map: str,
+    rank: str,
+    modifier: int,
+    result: str
 ):
-    # Your DB code here
-    await interaction.response.send_message("Match recorded!", ephemeral=True)
-
     rank_full = f"{rank} {modifier}"
     timestamp = datetime.datetime.utcnow().isoformat()
 
@@ -111,8 +135,7 @@ async def record(
 
     await interaction.response.send_message("Match recorded!", ephemeral=True)
 
-    
-
+# --- Slash Command: Show Results ---
 @bot.slash_command(name="result", description="Show your recorded matches for the current season")
 async def result(interaction: Interaction):
     user_id = interaction.user.id
@@ -141,7 +164,7 @@ async def result(interaction: Interaction):
     for i, row in enumerate(rows):
         dt = datetime.datetime.fromisoformat(row['timestamp'])
         formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
-        emoji = "✅" if row['result'].lower() == "win" else "❌"
+        emoji = "" if row['result'].lower() == "win" else ""
         match_number = i + 1
         embed.add_field(
             name=f"{emoji} {match_number}. {row['map']} [{row['result']}]",
@@ -150,7 +173,8 @@ async def result(interaction: Interaction):
         )
 
     await interaction.response.send_message(embed=embed)
-    
+
+# --- Slash Command: Help ---
 @bot.slash_command(name="help", description="Show available commands and usage")
 async def help_command(interaction: Interaction):
     embed = Embed(
@@ -178,33 +202,8 @@ async def help_command(interaction: Interaction):
     )
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
-    
-    
-# --- Autocomplete Handlers ---
-@bot.slash_command.autocomplete(name="record", option="role")
-async def autocomplete_role(interaction: Interaction, value: str):
-    await interaction.response.send_autocomplete([r for r in ROLE_HEROES if value.lower() in r.lower()][:25])
 
-@bot.slash_command.autocomplete(name="record", option="gamemode")
-async def autocomplete_gamemode(interaction: Interaction, value: str):
-    await interaction.response.send_autocomplete([g for g in GAMEMODE_MAPS if value.lower() in g.lower()][:25])
-
-@bot.slash_command.autocomplete(name="record", option="hero")
-async def autocomplete_hero(interaction: Interaction, value: str):
-    await interaction.response.send_autocomplete([h for h in ALL_HEROES if value.lower() in h.lower()][:25])
-
-@bot.slash_command.autocomplete(name="record", option="map")
-async def autocomplete_map(interaction: Interaction, value: str):
-    await interaction.response.send_autocomplete([m for m in ALL_MAPS if value.lower() in m.lower()][:25])
-
-@bot.slash_command.autocomplete(name="record", option="rank")
-async def autocomplete_rank(interaction: Interaction, value: str):
-    await interaction.response.send_autocomplete([r for r in RANK_TIERS if value.lower() in r.lower()][:25])
-
-@bot.slash_command.autocomplete(name="record", option="result")
-async def autocomplete_result(interaction: Interaction, value: str):
-    await interaction.response.send_autocomplete([r for r in VALID_RESULTS if value.lower() in r.lower()][:25])
-
+# --- Event: Bot Ready ---
 @bot.event
 async def on_ready():
     if not hasattr(bot, "synced"):
@@ -213,4 +212,5 @@ async def on_ready():
     init_db()
     print(f"Bot online as {bot.user}")
 
+# --- Run Bot ---
 bot.run(os.getenv("BOT_TOKEN"))
