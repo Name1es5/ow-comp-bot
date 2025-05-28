@@ -116,11 +116,15 @@ async def autocomplete_gamemode(interaction: Interaction, value: str):
 
 @record.on_autocomplete("hero")
 async def autocomplete_hero(interaction: Interaction, value: str):
-    await interaction.response.send_autocomplete([h for h in ALL_HEROES if value.lower() in h.lower()][:25])
+    role = interaction.data.get("options", [{}])[0].get("value", "")
+    heroes = ROLE_HEROES.get(role, ALL_HEROES)
+    await interaction.response.send_autocomplete([h for h in heroes if value.lower() in h.lower()][:25])
 
 @record.on_autocomplete("map")
 async def autocomplete_map(interaction: Interaction, value: str):
-    await interaction.response.send_autocomplete([m for m in ALL_MAPS if value.lower() in m.lower()][:25])
+    gamemode = interaction.data.get("options", [{}])[1].get("value", "")
+    maps = GAMEMODE_MAPS.get(gamemode, ALL_MAPS)
+    await interaction.response.send_autocomplete([m for m in maps if value.lower() in m.lower()][:25])
 
 @record.on_autocomplete("rank")
 async def autocomplete_rank(interaction: Interaction, value: str):
@@ -153,15 +157,15 @@ async def result(interaction: Interaction):
 
     embed = Embed(
         title="Your Matches",
-        description=f"**Season {season_number}** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nOldest match shown first.",
+        description=f"**Season {season_number}** — {len(rows)} match{'es' if len(rows) != 1 else ''}\nMost recent match shown last.",
         color=0x00ff99
     )
 
-    for i, row in enumerate(rows):
+    for i, row in enumerate(reversed(rows)):
         dt = datetime.datetime.fromisoformat(row['timestamp'])
         formatted = f"{dt.month}/{dt.day}/{dt.year % 100:02} {dt.strftime('%I:%M %p')}"
-        emoji = "" if row['result'].lower() == "win" else ""
-        match_number = i + 1
+        emoji = "\U00002705" if row['result'].lower() == "win" else "\U0000274C"
+        match_number = len(rows) - i
         embed.add_field(
             name=f"{emoji} {match_number}. {row['map']} [{row['result']}]",
             value=f"**Role:** {row['role']}, **Rank:** {row['rank']}, **Time:** {formatted}\n**Heroes:** {row['hero']}",
