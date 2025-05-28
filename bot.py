@@ -54,7 +54,7 @@ SEASON_1_START = datetime.datetime(2022, 10, 4)
 SEASON_DURATION_WEEKS = 9
 
 ROLE_HEROES = {
-    "Tank": ["Doomfist", "D.Va", "Hazard", "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Zarya"],
+    "Tank": ["Doomfist", "D.Va", "Hazard", "Ramattra", "Reinhardt", "Roadhog", "Sigma", "Winston", "Wrecking Ball", "Zarya"],
     "DPS": ["Ashe", "Bastion", "Cassidy", "Echo", "Freja", "Genji", "Hanzo", "Junkrat", "Mei", "Pharah", "Reaper",
             "Sojourn", "Soldier: 76", "Sombra", "Symmetra", "Torbj\u00f6rn", "Tracer", "Venture", "Widowmaker"],
     "Support": ["Ana", "Baptiste", "Brigitte", "Illari", "Kiriko", "Lifeweaver", "Lucio", "Mercy", "Moira", "Zenyatta"]
