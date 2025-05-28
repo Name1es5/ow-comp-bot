@@ -203,6 +203,37 @@ async def help_command(interaction: Interaction):
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# --- Slash Command: Show Top 3 Heroes ---    
+@bot.slash_command(name="top_heroes", description="Show your top 3 most played heroes")
+async def top_heroes(interaction: Interaction):
+    user_id = interaction.user.id
+
+    with get_db_connection() as conn:
+        with conn.cursor() as c:
+            c.execute('''
+                SELECT hero FROM matches
+                WHERE user_id = %s
+            ''', (user_id,))
+            rows = c.fetchall()
+
+    if not rows:
+        await interaction.response.send_message("No hero data available.")
+        return
+
+    hero_counts = Counter(row['hero'] for row in rows)
+    top_three = hero_counts.most_common(3)
+
+    embed = Embed(
+        title="Top 3 Heroes Played",
+        color=0xf1c40f
+    )
+
+    for i, (hero, count) in enumerate(top_three, start=1):
+        embed.add_field(name=f"#{i} — {hero}", value=f"Played {count} time{'s' if count != 1 else ''}", inline=False)
+
+    await interaction.response.send_message(embed=embed)
+
+
 # --- Event: Bot Ready ---
 @bot.event
 async def on_ready():
